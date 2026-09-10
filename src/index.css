@@ -1,0 +1,300 @@
+:root {
+  --color-primary: #58cc02;
+  --color-primary-shadow: #58a700;
+  --color-secondary: #1cb0f6;
+  --color-secondary-shadow: #1899d6;
+  --color-danger: #ff4b4b;
+  --color-danger-shadow: #ea2b2b;
+  --color-warning: #ffc800;
+  --color-warning-shadow: #e5b400;
+  --color-background: #ffffff;
+  --color-surface: #f7f7f7;
+  --color-text-main: #4b4b4b;
+  --color-text-muted: #afafaf;
+  --color-border: #e5e5e5;
+  
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Nunito', 'Varela Round', 'Inter', system-ui, sans-serif;
+  color: var(--color-text-main);
+  background-color: var(--color-background);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 800;
+  color: #3c3c3c;
+  letter-spacing: -0.02em;
+}
+
+h1 { font-size: 2.5rem; margin-bottom: 1rem; }
+h2 { font-size: 1.8rem; margin-bottom: 0.75rem; }
+h3 { font-size: 1.4rem; margin-bottom: 0.5rem; }
+
+p {
+  margin-bottom: 1rem;
+}
+
+/* Layout Utilities */
+.app-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 280px;
+  border-right: 2px solid var(--color-border);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background-color: white;
+}
+
+.main-content {
+  flex: 1;
+  padding: 2rem;
+  background-color: white;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Lingo-style Cards */
+.card {
+  background: white;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: 0 4px 0 var(--color-border);
+  margin-bottom: 1.5rem;
+  transition: all 0.2s ease;
+}
+
+/* Lingo-style Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.8rem 1.5rem;
+  font-weight: 700;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: var(--radius-lg);
+  border: none;
+  cursor: pointer;
+  transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  text-decoration: none;
+}
+
+.btn:active {
+  transform: translateY(4px);
+  box-shadow: 0 0px 0 transparent !important;
+}
+
+.btn-primary {
+  background-color: var(--color-primary);
+  color: white;
+  box-shadow: 0 4px 0 var(--color-primary-shadow);
+}
+
+.btn-primary:hover {
+  background-color: #61df05;
+}
+
+.btn-secondary {
+  background-color: var(--color-secondary);
+  color: white;
+  box-shadow: 0 4px 0 var(--color-secondary-shadow);
+}
+
+.btn-secondary:hover {
+  background-color: #20c1ff;
+}
+
+.btn-danger {
+  background-color: var(--color-danger);
+  color: white;
+  box-shadow: 0 4px 0 var(--color-danger-shadow);
+}
+
+.btn-danger:hover {
+  background-color: #ff5e5e;
+}
+
+.btn-outline {
+  background-color: transparent;
+  color: var(--color-secondary);
+  border: 2px solid var(--color-border);
+  box-shadow: 0 4px 0 var(--color-border);
+}
+
+.btn-outline:hover {
+  background-color: var(--color-surface);
+}
+
+/* Forms */
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+.form-label {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: #3c3c3c;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  font-size: 1rem;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  color: var(--color-text-main);
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--color-secondary);
+  background-color: white;
+}
+
+.form-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23afafaf' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1.2em;
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 99px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+}
+
+.badge-low { background: #e5f9d6; color: var(--color-primary-shadow); border: 2px solid #bce699;}
+.badge-medium { background: #fff5c2; color: #b38d00; border: 2px solid #ffe666;}
+.badge-high { background: #ffe2e2; color: var(--color-danger-shadow); border: 2px solid #ffb3b3;}
+
+/* Tables */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: white;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th, .table td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 2px solid var(--color-border);
+}
+
+.table th {
+  font-weight: 800;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  background-color: #fafafa;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr:hover {
+  background-color: var(--color-surface);
+}
+
+/* Navigation Menu */
+.nav-menu {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  color: var(--color-text-main);
+  font-weight: 700;
+  text-decoration: none;
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.nav-item:hover {
+  background-color: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+.nav-item.active {
+  background-color: #ddf4ff;
+  color: var(--color-secondary-shadow);
+  border-color: #84d8ff;
+}
+
+.nav-item svg {
+  color: inherit;
+}
+
+/* Markdown Styles */
+.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 {
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: #8e44ad;
+}
+
+.markdown-body p {
+  margin-bottom: 0.75rem;
+}
+
+.markdown-body ul, .markdown-body ol {
+  margin-bottom: 1rem;
+  padding-left: 1.5rem;
+}
+
+.markdown-body li {
+  margin-bottom: 0.25rem;
+}
+
+.markdown-body strong {
+  font-weight: 800;
+  color: #3c3c3c;
+}
