@@ -6,14 +6,23 @@ import { getAllPermohonan, deletePermohonan } from '../data/store';
 function InternalDashboard() {
   const [permohonanList, setPermohonanList] = useState([]);
 
+  const [loading, setLoading] = useState(true);
+
+  const loadData = async () => {
+    setLoading(true);
+    const data = await getAllPermohonan();
+    setPermohonanList(data || []);
+    setLoading(false);
+  };
+
   useEffect(() => {
-    setPermohonanList(getAllPermohonan());
+    loadData();
   }, []);
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Yakin ingin menghapus data ini secara permanen?')) {
-      deletePermohonan(id);
-      setPermohonanList(getAllPermohonan());
+      await deletePermohonan(id);
+      loadData();
     }
   };
 

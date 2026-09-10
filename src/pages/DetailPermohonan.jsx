@@ -38,30 +38,34 @@ function DetailPermohonan() {
   const [sp2Data, setSp2Data] = useState({ timJpn: [] });
 
   useEffect(() => {
-    const data = getPermohonanById(id);
-    if (data) {
-      setCurrentStep(data.currentStep);
-      setActiveAccordionStep(data.currentStep);
-      setSuratData(data.suratData || {});
-      setSp1Data(data.sp1Data || { timJpn: [] });
-      setTelaahData(data.telaahData || {});
-      setSp2Data(data.sp2Data || { timJpn: [] });
-      
-      if (data.monitoring) {
-        setMonitoringData(data.monitoring);
-        if (data.monitoring.aiAnalysis) setAiResponse(data.monitoring.aiAnalysis);
-        if (data.monitoring.risk) setAdminRiskLevel(data.monitoring.risk);
-        if (data.monitoring.adminNotes) setAdminRiskNotes(data.monitoring.adminNotes);
+    const fetchData = async () => {
+      const data = await getPermohonanById(id);
+      if (data) {
+        setCurrentStep(data.currentStep);
+        setActiveAccordionStep(data.currentStep);
+        setSuratData(data.suratData || {});
+        setSp1Data(data.sp1Data || { timJpn: [] });
+        setTelaahData(data.telaahData || {});
+        setSp2Data(data.sp2Data || { timJpn: [] });
+        
+        if (data.monitoring) {
+          setMonitoringData(data.monitoring);
+          if (data.monitoring.aiAnalysis) setAiResponse(data.monitoring.aiAnalysis);
+          if (data.monitoring.risk) setAdminRiskLevel(data.monitoring.risk);
+          if (data.monitoring.adminNotes) setAdminRiskNotes(data.monitoring.adminNotes);
+        }
+        setIsLoading(false);
+      } else {
+        alert('Permohonan tidak ditemukan!');
+        navigate('/');
       }
-      setIsLoading(false);
-    } else {
-      alert('Permohonan tidak ditemukan!');
-      navigate('/');
-    }
+    };
+    
+    fetchData();
   }, [id, navigate]);
 
-  const saveToDb = (step, surat, sp1, telaah, sp2) => {
-    updatePermohonan(id, {
+  const saveToDb = async (step, surat, sp1, telaah, sp2) => {
+    await updatePermohonan(id, {
       currentStep: step !== undefined ? step : currentStep,
       suratData: surat || suratData,
       sp1Data: sp1 || sp1Data,
@@ -93,15 +97,15 @@ function DetailPermohonan() {
     setSp2Data({ ...sp2Data, timJpn: baru });
   };
 
-  const handleSaveSP2 = () => {
+  const handleSaveSP2 = async () => {
     if (window.confirm('Simpan data SP-2?')) {
       setIsEditingSP2(false);
       setCurrentStep(5); // Move to step 5 or completed
-      saveToDb(5, suratData, sp1Data, telaahData, sp2Data);
+      await saveToDb(5, suratData, sp1Data, telaahData, sp2Data);
     }
   };
 
-  const handleSaveTelaah = () => {
+  const handleSaveTelaah = async () => {
     if (!telaahData.pembuat) {
       alert("Silakan pilih Pembuat Telaah terlebih dahulu.");
       return;
@@ -115,7 +119,7 @@ function DetailPermohonan() {
         nextStep = 5; // Anggap 5 adalah masuk arsip
       }
       setCurrentStep(nextStep);
-      saveToDb(nextStep, suratData, sp1Data, telaahData, sp2Data);
+      await saveToDb(nextStep, suratData, sp1Data, telaahData, sp2Data);
     }
   };
 
@@ -133,25 +137,25 @@ function DetailPermohonan() {
 
   if (isLoading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading...</div>;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsEditing(false);
-    saveToDb(currentStep, suratData, sp1Data, telaahData, sp2Data);
+    await saveToDb(currentStep, suratData, sp1Data, telaahData, sp2Data);
     alert('Data surat permohonan berhasil diperbarui!');
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (window.confirm('Yakin ingin menghapus permohonan ini secara permanen?')) {
-      deletePermohonan(id);
+      await deletePermohonan(id);
       navigate('/');
     }
   };
 
-  const handleSaveSP1 = () => {
+  const handleSaveSP1 = async () => {
     if (window.confirm('Data SP-1 sudah lengkap. Lanjutkan ke tahapan Telaah Hukum?')) {
       setIsEditingSP1(false);
       setCurrentStep(3);
       setActiveAccordionStep(3);
-      saveToDb(3, suratData, sp1Data, telaahData, sp2Data);
+      await saveToDb(3, suratData, sp1Data, telaahData, sp2Data);
     }
   };
 
@@ -227,7 +231,7 @@ Riwayat Hambatan Historis:
     }
   };
 
-  const handleSaveRiskAssessment = () => {
+  const handleSaveRiskAssessment = async () => {
     let newMonitoringData = { ...monitoringData };
     
     if (assessingReportIndex === -1) {
@@ -260,16 +264,16 @@ Riwayat Hambatan Historis:
     }
     newMonitoringData.risk = overallRisk;
 
-    updatePermohonan(id, {
+    await updatePermohonan(id, {
       monitoring: newMonitoringData
     });
     setMonitoringData(newMonitoringData);
     alert('Penilaian Risiko berhasil disimpan!');
   };
 
-  const handleSelesai = () => {
+  const handleSelesai = async () => {
     if (window.confirm('Tandai proses pendampingan hukum ini sebagai Selesai? Pemohon tidak akan bisa menambahkan laporan progres baru lagi.')) {
-      updatePermohonan(id, { currentStep: 6 }); // step 6 is Selesai
+      await updatePermohonan(id, { currentStep: 6 }); // step 6 is Selesai
       setCurrentStep(6);
     }
   };

@@ -39,10 +39,10 @@ function PemohonPortal() {
     return split[1] !== undefined ? rupiah + ',' + split[1] : rupiah;
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     if (password === linkId) {
-      const data = getPermohonanById(linkId);
+      const data = await getPermohonanById(linkId);
       if (data) {
         setProjectData(data);
         setIsUnlocked(true);
@@ -54,7 +54,7 @@ function PemohonPortal() {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const dateStr = new Date().toISOString().split('T')[0];
     
@@ -62,7 +62,7 @@ function PemohonPortal() {
 
     if (!hasInitialData) {
       // First time filling data
-      updatePermohonan(linkId, {
+      await updatePermohonan(linkId, {
         monitoring: {
           kegiatan: kegiatan,
           nilai: parseInt(nilaiAnggaran.replace(/\./g, ''), 10) || 0,
@@ -111,14 +111,14 @@ function PemohonPortal() {
         reports: [...(projectData.monitoring.reports || []), newReport]
       };
       
-      updatePermohonan(linkId, {
+      await updatePermohonan(linkId, {
         monitoring: updatedMonitoring
       });
       alert('Progres Berkala berhasil dilaporkan ke Kejati NTT!');
       setIsReportingProgress(false); // Close form modal
     }
     
-    setProjectData(getPermohonanById(linkId));
+    setProjectData(await getPermohonanById(linkId));
     // Clear dynamic fields
     setProgressKegiatan('');
     setPersentaseKegiatan('');

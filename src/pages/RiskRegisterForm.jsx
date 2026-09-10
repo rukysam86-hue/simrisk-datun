@@ -16,7 +16,7 @@ function PermohonanForm() {
   
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     
@@ -39,12 +39,15 @@ function PermohonanForm() {
       monitoring: null // Not started yet
     };
 
-    setTimeout(() => {
-      addPermohonan(newPermohonan);
-      setIsSubmitting(false);
+    try {
+      await addPermohonan(newPermohonan);
       alert(`Permohonan berhasil disimpan!\nID Akses Pemohon: ${newId}`);
       navigate('/');
-    }, 500);
+    } catch (error) {
+      alert('Gagal menyimpan permohonan. Periksa koneksi atau konfigurasi Supabase.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
