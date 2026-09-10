@@ -36,7 +36,7 @@ function InternalDashboard() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <div>
-          <h1>Dashboard Pengawasan</h1>
+          <h1>Dashboard Simrisk Datun Kejati NTT</h1>
           <p style={{ color: 'var(--color-text-muted)', fontWeight: '700' }}>Ringkasan Kegiatan Pendampingan Hukum</p>
         </div>
         <Link to="/register" className="btn btn-primary">

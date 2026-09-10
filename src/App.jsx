@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Home, FileText, AlertTriangle, Key, Settings as SettingsIcon } from 'lucide-react';
+import { Home, FileText, Key, Settings as SettingsIcon } from 'lucide-react';
 import './index.css';
 
 // Placeholder Pages
@@ -15,11 +15,30 @@ function Sidebar() {
 
   return (
     <div className="sidebar">
-      <div style={{ padding: '1rem 0', marginBottom: '1rem' }}>
-        <h2 style={{ color: 'var(--color-primary-shadow)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <AlertTriangle />
-          SIMRISK DATUN
-        </h2>
+      <div style={{ padding: '0.5rem 0 1.25rem', marginBottom: '1rem', borderBottom: '2px solid var(--color-border)', textAlign: 'center' }}>
+        <Link to="/" style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.6rem' }}>
+          <img 
+            src="/logo.png" 
+            alt="Logo SIMRISK DATUN" 
+            style={{ 
+              width: '105px', 
+              height: 'auto', 
+              objectFit: 'contain',
+              filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.12))',
+              transition: 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)'
+            }} 
+            onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+            onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          />
+          <div>
+            <div style={{ fontWeight: 900, fontSize: '1.2rem', color: 'var(--color-primary-shadow)', letterSpacing: '0.04em', lineHeight: 1.2 }}>
+              SIMRISK DATUN
+            </div>
+            <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '3px' }}>
+              Kejati NTT
+            </div>
+          </div>
+        </Link>
       </div>
       
       <nav>

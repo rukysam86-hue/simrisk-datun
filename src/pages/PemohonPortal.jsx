@@ -129,11 +129,13 @@ function PemohonPortal() {
   if (!isUnlocked || !projectData) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'var(--color-surface)' }}>
-        <div className="card" style={{ maxWidth: '400px', width: '100%', textAlign: 'center' }}>
-          <div style={{ background: '#e5f9d6', width: '64px', height: '64px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', color: 'var(--color-primary-shadow)' }}>
-            <Lock size={32} />
-          </div>
-          <h2 style={{ marginBottom: '0.5rem' }}>Portal Pemohon</h2>
+        <div className="card" style={{ maxWidth: '420px', width: '100%', textAlign: 'center', padding: '2.5rem 2rem' }}>
+          <img 
+            src="/logo.png" 
+            alt="Logo SIMRISK DATUN" 
+            style={{ width: '125px', height: 'auto', margin: '0 auto 1.25rem', display: 'block', filter: 'drop-shadow(0 6px 14px rgba(0,0,0,0.12))' }} 
+          />
+          <h2 style={{ marginBottom: '0.5rem', color: 'var(--color-primary-shadow)' }}>Portal Pemohon Mandiri</h2>
           <p style={{ color: 'var(--color-text-muted)', fontWeight: 700, marginBottom: '2rem' }}>
             Masukkan PIN / Kata Sandi untuk melaporkan progres kegiatan pendampingan Anda.
           </p>
@@ -228,6 +230,20 @@ function PemohonPortal() {
     <div style={{ minHeight: '100vh', background: 'var(--color-surface)', padding: '2rem' }}>
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
         
+        {/* Portal Header Branding */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', background: 'white', padding: '0.85rem 1.5rem', borderRadius: 'var(--radius-lg)', border: '2px solid var(--color-border)', boxShadow: '0 2px 0 var(--color-border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+            <img src="/logo.png" alt="Logo SIMRISK DATUN" style={{ width: '48px', height: 'auto', objectFit: 'contain' }} />
+            <div>
+              <div style={{ fontWeight: 900, fontSize: '1.15rem', color: 'var(--color-primary-shadow)', lineHeight: 1.1 }}>SIMRISK DATUN</div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Portal Pemohon • Kejati NTT</div>
+            </div>
+          </div>
+          <span className="badge" style={{ background: '#e5f9d6', color: 'var(--color-primary-shadow)', fontWeight: 800, padding: '0.4rem 0.8rem' }}>
+            Akses Terverifikasi
+          </span>
+        </div>
+
         {/* Header Info */}
         <div className="card" style={{ display: 'flex', gap: '2rem', alignItems: 'center', backgroundColor: 'var(--color-primary)', color: 'white', borderColor: 'var(--color-primary-shadow)', marginBottom: '2rem' }}>
           <div style={{ background: 'rgba(255,255,255,0.2)', padding: '1.5rem', borderRadius: 'var(--radius-md)' }}>
