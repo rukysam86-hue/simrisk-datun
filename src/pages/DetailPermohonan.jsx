@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, Clock, FileText, ShieldAlert, Download, Edit3, Save, X, Trash2, Activity } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Clock, FileText, ShieldAlert, Download, Edit3, Save, X, Trash2, Activity, Sparkles, Plus, ExternalLink, Copy } from 'lucide-react';
 import { getPermohonanById, updatePermohonan, deletePermohonan } from '../data/store';
 import ReactMarkdown from 'react-markdown';
 
@@ -27,6 +27,16 @@ function DetailPermohonan() {
   
   // -1 means assessing "Data Awal", 0+ means assessing a report index. null means closed.
   const [assessingReportIndex, setAssessingReportIndex] = useState(null);
+
+  // States for Admin inputting Data Awal directly
+  const [isAddingInitialData, setIsAddingInitialData] = useState(false);
+  const [formKegiatan, setFormKegiatan] = useState('');
+  const [formNilai, setFormNilai] = useState('');
+  const [formKasusPosisi, setFormKasusPosisi] = useState('');
+  const [formProgres, setFormProgres] = useState('');
+  const [formPersentase, setFormPersentase] = useState('');
+  const [formHambatan, setFormHambatan] = useState('');
+  const [formKeterangan, setFormKeterangan] = useState('');
 
   const [isEditingSP1, setIsEditingSP1] = useState(false);
   const [sp1Data, setSp1Data] = useState({ timJpn: [] });
@@ -135,6 +145,48 @@ function DetailPermohonan() {
     return url;
   };
 
+  const formatRupiah = (value) => {
+    const numberString = (value || '').toString().replace(/[^,\d]/g, '');
+    const split = numberString.split(',');
+    const sisa = split[0].length % 3;
+    let rupiah = split[0].substr(0, sisa);
+    const ribuan = split[0].substr(sisa).match(/\d{3}/gi);
+
+    if (ribuan) {
+      const separator = sisa ? '.' : '';
+      rupiah += separator + ribuan.join('.');
+    }
+
+    return split[1] !== undefined ? rupiah + ',' + split[1] : rupiah;
+  };
+
+  const handleSaveInitialDataAdmin = async (e) => {
+    e.preventDefault();
+    const dateStr = new Date().toISOString().split('T')[0];
+    const newMonitoring = {
+      kegiatan: formKegiatan,
+      nilai: parseInt((formNilai || '').replace(/\./g, ''), 10) || 0,
+      kasusPosisi: formKasusPosisi,
+      progressKegiatan: formProgres,
+      persentaseKegiatan: `${formPersentase}%`,
+      hambatan: formHambatan,
+      keterangan: formKeterangan,
+      lastUpdate: dateStr,
+      initialData: {
+        date: dateStr,
+        progressKegiatan: formProgres,
+        persentaseKegiatan: `${formPersentase}%`,
+        hambatan: formHambatan,
+        keterangan: formKeterangan
+      },
+      reports: []
+    };
+    await updatePermohonan(id, { monitoring: newMonitoring });
+    setMonitoringData(newMonitoring);
+    setIsAddingInitialData(false);
+    alert('Data Awal (Monev) berhasil disimpan ke Supabase!');
+  };
+
   if (isLoading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading...</div>;
 
   const handleSave = async () => {
@@ -176,7 +228,7 @@ function DetailPermohonan() {
     try {
       let prompt = `Anda adalah seorang ahli hukum perdata dan Tata Usaha Negara (TUN) sekaligus Jaksa Pengacara Negara (JPN) yang sangat berpengalaman dalam memberikan pertimbangan hukum atau pendampingan litigasi terhadap proyek permohonan pemerintah, BUMN, atau BUMD.`;
       
-      if (assessingReportIndex === -1) {
+      if (assessingReportIndex === -1 || assessingReportIndex === null) {
         prompt += `\n\nTolong berikan analisis risiko, skor risiko (Rendah/Sedang/Tinggi), serta rekomendasi langkah mitigasi hukum dan teknis untuk proyek ini berdasarkan data awal pemohon:
 - Kegiatan: ${monitoringData.kegiatan}
 - Anggaran: ${monitoringData.nilai}
@@ -184,7 +236,7 @@ function DetailPermohonan() {
 - Progress: ${monitoringData.initialData?.progressKegiatan || monitoringData.progressKegiatan} (${monitoringData.initialData?.persentaseKegiatan || monitoringData.persentaseKegiatan})
 - Hambatan: ${monitoringData.initialData?.hambatan || monitoringData.hambatan}`;
       } else {
-        const report = monitoringData.reports[assessingReportIndex];
+        const report = (monitoringData.reports || [])[assessingReportIndex] || {};
         
         prompt += `\n\nKonteks Proyek: ${monitoringData.kegiatan} (Anggaran: ${monitoringData.nilai})
 Kasus Posisi: ${monitoringData.kasusPosisi}
@@ -193,7 +245,7 @@ Riwayat Hambatan Historis:
 - Data Awal: ${monitoringData.initialData?.hambatan || monitoringData.hambatan}`;
 
         for(let i = 0; i < assessingReportIndex; i++) {
-           prompt += `\n- Progres ${i+1}: ${monitoringData.reports[i].hambatan}`;
+           prompt += `\n- Progres ${i+1}: ${(monitoringData.reports || [])[i]?.hambatan || '-'}`;
         }
         
         prompt += `\n\nBerdasarkan riwayat di atas, tolong berikan analisis risiko, skor risiko (Rendah/Sedang/Tinggi), serta rekomendasi langkah mitigasi hukum dan teknis untuk LAPORAN PROGRES TERBARU berikut ini:
@@ -233,18 +285,22 @@ Riwayat Hambatan Historis:
 
   const handleSaveRiskAssessment = async () => {
     let newMonitoringData = { ...monitoringData };
+    const targetIdx = (assessingReportIndex === null) ? -1 : assessingReportIndex;
     
-    if (assessingReportIndex === -1) {
+    if (targetIdx === -1) {
       newMonitoringData.initialData = {
-        ...newMonitoringData.initialData,
+        ...(newMonitoringData.initialData || {}),
         aiAnalysis: aiResponse,
         risk: adminRiskLevel,
         adminNotes: adminRiskNotes
       };
+      newMonitoringData.aiAnalysis = aiResponse;
+      newMonitoringData.risk = adminRiskLevel;
+      newMonitoringData.adminNotes = adminRiskNotes;
     } else {
-      newMonitoringData.reports = [...newMonitoringData.reports];
-      newMonitoringData.reports[assessingReportIndex] = {
-        ...newMonitoringData.reports[assessingReportIndex],
+      newMonitoringData.reports = [...(newMonitoringData.reports || [])];
+      newMonitoringData.reports[targetIdx] = {
+        ...newMonitoringData.reports[targetIdx],
         aiAnalysis: aiResponse,
         risk: adminRiskLevel,
         adminNotes: adminRiskNotes
@@ -252,7 +308,6 @@ Riwayat Hambatan Historis:
     }
 
     // Recalculate the OVERALL project risk (used by the dashboard)
-    // It should follow the latest assessed report, or fallback to Data Awal.
     let overallRisk = newMonitoringData.initialData?.risk || newMonitoringData.risk || 'low';
     if (newMonitoringData.reports && newMonitoringData.reports.length > 0) {
       for (let i = newMonitoringData.reports.length - 1; i >= 0; i--) {
@@ -268,7 +323,7 @@ Riwayat Hambatan Historis:
       monitoring: newMonitoringData
     });
     setMonitoringData(newMonitoringData);
-    alert('Penilaian Risiko berhasil disimpan!');
+    alert('Penilaian Risiko Kejati berhasil disimpan!');
   };
 
   const handleSelesai = async () => {
@@ -281,11 +336,11 @@ Riwayat Hambatan Historis:
   const openAssessmentModal = (index) => {
     setAssessingReportIndex(index);
     if (index === -1) {
-      setAiResponse(monitoringData.aiAnalysis || '');
-      setAdminRiskLevel(monitoringData.risk || 'low');
-      setAdminRiskNotes(monitoringData.adminNotes || '');
+      setAiResponse(monitoringData?.initialData?.aiAnalysis || monitoringData?.aiAnalysis || '');
+      setAdminRiskLevel(monitoringData?.initialData?.risk || monitoringData?.risk || 'low');
+      setAdminRiskNotes(monitoringData?.initialData?.adminNotes || monitoringData?.adminNotes || '');
     } else {
-      const rep = monitoringData.reports[index];
+      const rep = (monitoringData?.reports || [])[index] || {};
       setAiResponse(rep.aiAnalysis || '');
       setAdminRiskLevel(rep.risk || 'low');
       setAdminRiskNotes(rep.adminNotes || '');
@@ -514,14 +569,162 @@ Riwayat Hambatan Historis:
         </div>
 
         {/* Right Column: Data Awal & AI Analysis */}
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {/* Data Awal (Monitoring) & AI Analysis Section */}
-          {monitoringData ? (
-            monitoringData.risk ? (
-              <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                <div style={{ padding: '1.5rem', borderBottom: '2px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fafafa' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          
+          {!monitoringData ? (
+            /* KASUS 1: Pemohon Belum Mengisi Data Awal */
+            <div className="card" style={{ padding: '2rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                <div style={{ background: '#fef5e7', color: '#d35400', padding: '1rem', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Activity size={32} />
+                </div>
+                <div>
+                  <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Data Awal (Monev) Kegiatan</h2>
+                  <p style={{ color: 'var(--color-text-muted)', margin: '0.25rem 0 0 0', fontSize: '0.9rem' }}>
+                    Pemohon belum mengisi formulir Data Awal Monev melalui Portal Pemohon.
+                  </p>
+                </div>
+              </div>
+
+              {/* Box Info Akses Portal Pemohon */}
+              <div style={{ background: '#f8f9fa', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '1.25rem', marginBottom: '1.5rem' }}>
+                <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.95rem', color: 'var(--color-text-main)' }}>Akses Portal Klien (Pemohon):</h4>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                  <div>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', display: 'block', marginBottom: '0.25rem' }}>PIN / Password Akses:</span>
+                    <strong style={{ fontSize: '1.1rem', letterSpacing: '0.15em', background: '#eef7ff', padding: '0.3rem 0.8rem', borderRadius: '4px', color: 'var(--color-primary-shadow)', border: '1px solid #cce5ff' }}>
+                      {id}
+                    </strong>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <a href={`/portal/${id}`} target="_blank" rel="noreferrer" className="btn btn-outline" style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <ExternalLink size={15} /> Buka Portal Klien
+                    </a>
+                    <button 
+                      type="button"
+                      className="btn btn-outline" 
+                      style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/portal/${id}`);
+                        alert(`Link portal pemohon berhasil disalin!\n${window.location.origin}/portal/${id}\nPIN: ${id}`);
+                      }}
+                    >
+                      <Copy size={15} /> Salin Link & PIN
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pilihan Input Langsung oleh Kejati */}
+              {!isAddingInitialData ? (
+                <div style={{ textAlign: 'center', padding: '1rem 0', borderTop: '1px solid var(--color-border)' }}>
+                  <p style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', marginBottom: '1rem' }}>
+                    Atau Anda dapat menginputkan Data Awal Monev proyek ini langsung dari sisi Kejati:
+                  </p>
+                  <button 
+                    className="btn btn-primary" 
+                    onClick={() => {
+                      setFormKegiatan(suratData?.perihal || '');
+                      setIsAddingInitialData(true);
+                    }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+                  >
+                    <Plus size={18} /> Input Data Awal (Monev) Kejati
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleSaveInitialDataAdmin} style={{ borderTop: '2px dashed var(--color-border)', paddingTop: '1.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--color-primary-shadow)' }}>Form Input Data Awal Monev (Kejati)</h3>
+                    <button type="button" className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.85rem' }} onClick={() => setIsAddingInitialData(false)}>Batal</button>
+                  </div>
+                  <div className="form-group" style={{ marginBottom: '1rem' }}>
+                    <label className="form-label" style={{ fontWeight: 600 }}>Kegiatan Yang Didampingi</label>
+                    <input className="form-input" required value={formKegiatan} onChange={e => setFormKegiatan(e.target.value)} placeholder="Contoh: Pembangunan SMA Unggul Garuda..." />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: '1rem' }}>
+                    <label className="form-label" style={{ fontWeight: 600 }}>Nilai Anggaran</label>
+                    <div style={{ display: 'flex', alignItems: 'center', background: 'white', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '0 0.5rem' }}>
+                      <span style={{ fontWeight: 700, paddingRight: '0.5rem', color: 'var(--color-text-muted)' }}>Rp</span>
+                      <input type="text" style={{ flex: 1, padding: '0.6rem 0', border: 'none', outline: 'none', background: 'transparent' }} placeholder="Contoh: 15.000.000.000" value={formNilai} onChange={e => setFormNilai(formatRupiah(e.target.value))} required />
+                    </div>
+                  </div>
+                  <div className="form-group" style={{ marginBottom: '1rem' }}>
+                    <label className="form-label" style={{ fontWeight: 600 }}>Kasus Posisi</label>
+                    <textarea className="form-input" rows="3" required value={formKasusPosisi} onChange={e => setFormKasusPosisi(e.target.value)} placeholder="Uraian singkat posisi kasus/kegiatan..." />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                    <div>
+                      <label className="form-label" style={{ fontWeight: 600 }}>Progress Kegiatan</label>
+                      <input className="form-input" required value={formProgres} onChange={e => setFormProgres(e.target.value)} placeholder="Contoh: Tahap Pengadaan / Konstruksi Awal" />
+                    </div>
+                    <div>
+                      <label className="form-label" style={{ fontWeight: 600 }}>Persentase (%)</label>
+                      <input type="number" className="form-input" required value={formPersentase} onChange={e => setFormPersentase(e.target.value)} placeholder="0 - 100" />
+                    </div>
+                  </div>
+                  <div className="form-group" style={{ marginBottom: '1rem' }}>
+                    <label className="form-label" style={{ fontWeight: 600 }}>Hambatan / Kendala</label>
+                    <textarea className="form-input" rows="2" value={formHambatan} onChange={e => setFormHambatan(e.target.value)} placeholder="Tuliskan hambatan atau kendala yang dihadapi di lapangan..." />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                    <label className="form-label" style={{ fontWeight: 600 }}>Keterangan Tambahan</label>
+                    <textarea className="form-input" rows="2" value={formKeterangan} onChange={e => setFormKeterangan(e.target.value)} placeholder="Catatan tambahan (opsional)..." />
+                  </div>
+                  <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Simpan Data Awal & Buka Form Penilaian</button>
+                </form>
+              )}
+            </div>
+          ) : (
+            /* KASUS 2: Data Awal Sudah Ada */
+            <>
+              {/* Card 1: Data Awal / Konteks Proyek */}
+              <div className="card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.75rem' }}>
                   <h2 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                     <Activity size={20} /> Riwayat Laporan Progres
+                    <Activity size={20} color="var(--color-primary-shadow)" /> Data Awal (Monev) Klien
+                  </h2>
+                  <span className="badge" style={{ background: '#eef7ff', color: 'var(--color-primary-shadow)' }}>
+                    Terdaftar: {monitoringData.initialData?.date || monitoringData.lastUpdate}
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+                  <div>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Kegiatan</span>
+                    <div style={{ fontWeight: 700 }}>{monitoringData.kegiatan || '-'}</div>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Nilai Anggaran</span>
+                    <div style={{ fontWeight: 700 }}>
+                      {monitoringData.nilai ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(monitoringData.nilai) : '-'}
+                    </div>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Progres Kegiatan</span>
+                    <div style={{ fontWeight: 700 }}>{monitoringData.initialData?.progressKegiatan || monitoringData.progressKegiatan || '-'} ({monitoringData.initialData?.persentaseKegiatan || monitoringData.persentaseKegiatan || '0%'})</div>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Terakhir Update</span>
+                    <div style={{ fontWeight: 700 }}>{monitoringData.lastUpdate || '-'}</div>
+                  </div>
+                </div>
+                
+                <div style={{ marginBottom: '1rem' }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Kasus Posisi</span>
+                  <div style={{ background: 'var(--color-surface)', padding: '0.75rem', borderRadius: '4px', fontSize: '0.9rem' }}>{monitoringData.kasusPosisi || '-'}</div>
+                </div>
+                
+                <div>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Hambatan / Kendala</span>
+                  <div style={{ background: '#fff0f0', color: '#c0392b', border: '1px solid #ffcccc', padding: '0.75rem', borderRadius: '4px', fontSize: '0.9rem' }}>{monitoringData.initialData?.hambatan || monitoringData.hambatan || '-'}</div>
+                </div>
+              </div>
+
+              {/* Card 2: Tabel Riwayat Laporan Progres & Penilaian */}
+              <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                <div style={{ padding: '1.25rem 1.5rem', borderBottom: '2px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fafafa' }}>
+                  <h2 style={{ fontSize: '1.15rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Activity size={20} color="var(--color-primary-shadow)" /> Riwayat Laporan Progres & Penilaian
                   </h2>
                 </div>
                 <div className="table-container" style={{ border: 'none', borderRadius: 0 }}>
@@ -531,10 +734,12 @@ Riwayat Hambatan Historis:
                         <th>Tahap / Waktu</th>
                         <th>Progres</th>
                         <th>Hambatan / Catatan</th>
-                        <th style={{ width: '120px' }}>Aksi</th>
+                        <th>Status Risiko & Catatan Kejati</th>
+                        <th style={{ width: '130px' }}>Aksi</th>
                       </tr>
                     </thead>
                     <tbody>
+                      {/* Baris 1: Data Awal */}
                       <tr>
                         <td>
                           <div style={{ fontWeight: 800 }}>Data Awal</div>
@@ -546,25 +751,43 @@ Riwayat Hambatan Historis:
                         <td>
                           <div style={{ fontSize: '0.9rem', color: '#c0392b' }}>{monitoringData.initialData?.hambatan || monitoringData.hambatan || '-'}</div>
                           {(monitoringData.initialData?.keterangan || monitoringData.keterangan) && (
-                            <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: '0.5rem' }}>Ket: {monitoringData.initialData?.keterangan || monitoringData.keterangan}</div>
+                            <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>Ket: {monitoringData.initialData?.keterangan || monitoringData.keterangan}</div>
                           )}
                         </td>
                         <td>
-                          {monitoringData.risk ? (
+                          {monitoringData.initialData?.risk || monitoringData.risk ? (
+                            <div>
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600, backgroundColor: (monitoringData.initialData?.risk || monitoringData.risk) === 'high' ? '#ffe2e2' : (monitoringData.initialData?.risk || monitoringData.risk) === 'medium' ? '#fff5cc' : '#e5f9d6', color: (monitoringData.initialData?.risk || monitoringData.risk) === 'high' ? 'var(--color-danger)' : (monitoringData.initialData?.risk || monitoringData.risk) === 'medium' ? '#d4ac0d' : 'var(--color-primary-shadow)' }}>
+                                {(monitoringData.initialData?.risk || monitoringData.risk) === 'high' ? 'Tinggi' : (monitoringData.initialData?.risk || monitoringData.risk) === 'medium' ? 'Sedang' : 'Rendah'}
+                              </div>
+                              {(monitoringData.initialData?.adminNotes || monitoringData.adminNotes) && (
+                                <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: '0.35rem' }}>
+                                  {monitoringData.initialData?.adminNotes || monitoringData.adminNotes}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span style={{ color: '#e67e22', fontStyle: 'italic', fontSize: '0.85rem', fontWeight: 600 }}>Belum Dinilai</span>
+                          )}
+                        </td>
+                        <td>
+                          {monitoringData.initialData?.risk || monitoringData.risk ? (
                             <button className="btn btn-outline" style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem', width: '100%', display: 'flex', justifyContent: 'center', gap: '0.25rem' }} onClick={() => openAssessmentModal(-1)}>
                               <ShieldAlert size={14} /> Detail
                             </button>
                           ) : (
-                            <button className="btn btn-primary" style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem', width: '100%', display: 'flex', justifyContent: 'center', gap: '0.25rem' }} onClick={() => openAssessmentModal(-1)}>
-                              Beri Penilaian
+                            <button className="btn btn-primary" style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem', width: '100%', display: 'flex', justifyContent: 'center', gap: '0.25rem', background: '#8e44ad', borderColor: '#732d91' }} onClick={() => openAssessmentModal(-1)}>
+                              <Sparkles size={14} /> Beri Penilaian
                             </button>
                           )}
                         </td>
                       </tr>
+
+                      {/* Baris-baris Laporan Progres Berkala */}
                       {(monitoringData.reports || []).map((rep, idx) => (
-                        <tr key={idx}>
+                        <tr key={rep.id || idx}>
                           <td>
-                            <div style={{ fontWeight: 800 }}>Laporan Progres {idx + 1}</div>
+                            <div style={{ fontWeight: 800 }}>Laporan #{idx + 1}</div>
                             <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>{rep.tanggal || rep.date}</div>
                           </td>
                           <td>
@@ -572,6 +795,23 @@ Riwayat Hambatan Historis:
                           </td>
                           <td>
                             <div style={{ fontSize: '0.9rem', color: '#c0392b' }}>{rep.hambatan || '-'}</div>
+                            {rep.keterangan && (
+                              <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>Ket: {rep.keterangan}</div>
+                            )}
+                          </td>
+                          <td>
+                            {rep.risk ? (
+                              <div>
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600, backgroundColor: rep.risk === 'high' ? '#ffe2e2' : rep.risk === 'medium' ? '#fff5cc' : '#e5f9d6', color: rep.risk === 'high' ? 'var(--color-danger)' : rep.risk === 'medium' ? '#d4ac0d' : 'var(--color-primary-shadow)' }}>
+                                  {rep.risk === 'high' ? 'Tinggi' : rep.risk === 'medium' ? 'Sedang' : 'Rendah'}
+                                </div>
+                                {rep.adminNotes && (
+                                  <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: '0.35rem' }}>{rep.adminNotes}</div>
+                                )}
+                              </div>
+                            ) : (
+                              <span style={{ color: '#e67e22', fontStyle: 'italic', fontSize: '0.85rem', fontWeight: 600 }}>Belum Dinilai</span>
+                            )}
                           </td>
                           <td>
                             {rep.risk ? (
@@ -579,8 +819,8 @@ Riwayat Hambatan Historis:
                                 <ShieldAlert size={14} /> Detail
                               </button>
                             ) : (
-                              <button className="btn btn-primary" style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem', width: '100%', display: 'flex', justifyContent: 'center', gap: '0.25rem' }} onClick={() => openAssessmentModal(idx)}>
-                                Beri Penilaian
+                              <button className="btn btn-primary" style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem', width: '100%', display: 'flex', justifyContent: 'center', gap: '0.25rem', background: '#8e44ad', borderColor: '#732d91' }} onClick={() => openAssessmentModal(idx)}>
+                                <Sparkles size={14} /> Beri Penilaian
                               </button>
                             )}
                           </td>
@@ -590,51 +830,92 @@ Riwayat Hambatan Historis:
                   </table>
                 </div>
               </div>
-            ) : (
-              <div className="card">
-              <h2 style={{ fontSize: '1.2rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                 <Activity size={20} /> Data Awal (Monev) Klien
-              </h2>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-                <div>
-                   <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Kegiatan</span>
-                   <div style={{ fontWeight: 700 }}>{monitoringData.kegiatan || '-'}</div>
+
+              {/* Card 3: Form Penilaian Kejati Langsung (Jika Data Awal Belum Dinilai) */}
+              {(!monitoringData.initialData?.risk && !monitoringData.risk) && (
+                <div className="card" style={{ border: '2px solid #8e44ad', background: '#fdfcfe' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid #ebdcf5', paddingBottom: '0.75rem' }}>
+                    <h3 style={{ margin: 0, color: '#8e44ad', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.2rem' }}>
+                      <Sparkles size={22} /> Form Penilaian Risiko oleh Kejati
+                    </h3>
+                    <span className="badge" style={{ background: '#8e44ad', color: 'white' }}>Data Awal</span>
+                  </div>
+
+                  {/* AI Analysis Section */}
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                      <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#5b2c6f' }}>
+                        ✨ Analisis Risiko AI Gemini (Persona JPN & Ahli Hukum Perdata/TUN)
+                      </span>
+                      {aiResponse && (
+                        <button 
+                          className="btn btn-outline" 
+                          style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', borderColor: '#8e44ad', color: '#8e44ad' }} 
+                          onClick={() => setIsEditingAiResponse(!isEditingAiResponse)}
+                        >
+                          {isEditingAiResponse ? 'Lihat Markdown' : 'Edit Analisis'}
+                        </button>
+                      )}
+                    </div>
+
+                    {!aiResponse ? (
+                      <button onClick={handleGenerateAIAnalysis} className="btn btn-primary" style={{ background: '#8e44ad', borderColor: '#732d91', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }} disabled={isAiLoading}>
+                        <Sparkles size={18} />
+                        {isAiLoading ? 'Menghitung Analisis & Rekomendasi JPN...' : 'Hitung Analisis & Rekomendasi Risiko (Gemini)'}
+                      </button>
+                    ) : (
+                      <div>
+                        {isEditingAiResponse ? (
+                          <textarea 
+                            className="form-input" 
+                            style={{ width: '100%', height: '300px', fontSize: '0.9rem', backgroundColor: '#fff', borderColor: '#8e44ad', outline: 'none' }} 
+                            value={aiResponse} 
+                            onChange={(e) => setAiResponse(e.target.value)}
+                          />
+                        ) : (
+                          <div className="markdown-body" style={{ background: '#fff', border: '1px solid #d7bde2', padding: '1.5rem', borderRadius: '8px', lineHeight: '1.6', maxHeight: '400px', overflowY: 'auto' }}>
+                            <ReactMarkdown>{aiResponse}</ReactMarkdown>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Form Penentuan Risiko */}
+                  <div style={{ background: 'white', border: '1px solid #d7bde2', padding: '1.25rem', borderRadius: '8px' }}>
+                    <h4 style={{ margin: '0 0 1rem 0', fontSize: '1.05rem', color: 'var(--color-text-main)' }}>
+                      Penentuan Tingkat Risiko & Instruksi Mitigasi
+                    </h4>
+
+                    <div style={{ marginBottom: '1rem' }}>
+                      <label className="form-label" style={{ fontWeight: 600 }}>Tingkat Risiko Final</label>
+                      <select className="form-input" value={adminRiskLevel} onChange={e => setAdminRiskLevel(e.target.value)}>
+                        <option value="low">🟢 Rendah (Aman / Proyek Berjalan Normal)</option>
+                        <option value="medium">🟡 Sedang (Perlu Perhatian & Monitoring Ketat)</option>
+                        <option value="high">🔴 Tinggi (Kritis / Perlu Tindakan Mitigasi Segera)</option>
+                      </select>
+                    </div>
+
+                    <div style={{ marginBottom: '1.25rem' }}>
+                      <label className="form-label" style={{ fontWeight: 600 }}>Catatan / Instruksi untuk Pemohon</label>
+                      <textarea 
+                        className="form-input" 
+                        rows="3" 
+                        value={adminRiskNotes} 
+                        onChange={e => setAdminRiskNotes(e.target.value)} 
+                        placeholder="Tuliskan instruksi langkah mitigasi yang harus dipenuhi oleh pemohon pada pelaporan berikutnya..."
+                      />
+                    </div>
+
+                    <button className="btn btn-primary" style={{ width: '100%', background: '#8e44ad', borderColor: '#732d91' }} onClick={handleSaveRiskAssessment}>
+                      Simpan Penilaian Kejati
+                    </button>
+                  </div>
                 </div>
-                <div>
-                   <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Nilai Anggaran</span>
-                   <div style={{ fontWeight: 700 }}>
-                     {monitoringData.nilai ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(monitoringData.nilai) : '-'}
-                   </div>
-                </div>
-                <div>
-                   <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Progres Kegiatan</span>
-                   <div style={{ fontWeight: 700 }}>{monitoringData.progressKegiatan || '-'} ({monitoringData.persentaseKegiatan || '0%'})</div>
-                </div>
-                <div>
-                   <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Terakhir Update</span>
-                   <div style={{ fontWeight: 700 }}>{monitoringData.lastUpdate || '-'}</div>
-                </div>
-              </div>
-              
-              <div style={{ marginBottom: '1rem' }}>
-                 <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Kasus Posisi</span>
-                 <div style={{ background: 'var(--color-surface)', padding: '0.75rem', borderRadius: '4px', fontSize: '0.9rem' }}>{monitoringData.kasusPosisi || '-'}</div>
-              </div>
-              
-              <div style={{ marginBottom: '1rem' }}>
-                 <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Hambatan / Kendala</span>
-                 <div style={{ background: '#fff0f0', color: '#c0392b', border: '1px solid #ffcccc', padding: '0.75rem', borderRadius: '4px', fontSize: '0.9rem' }}>{monitoringData.hambatan || '-'}</div>
-              </div>
-          
-              {/* AI Analysis Section */}
-              </div>
-            )
-          ) : (
-            <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '300px', color: 'var(--color-text-muted)' }}>
-              <Activity size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
-              <p>Pemohon belum mengisi Data Awal / Monev.</p>
-            </div>
+              )}
+            </>
           )}
+
         </div>
       </div>
 
