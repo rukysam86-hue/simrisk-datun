@@ -749,9 +749,18 @@ Riwayat Hambatan Historis:
                           <div style={{ fontWeight: 700 }}>{monitoringData.initialData?.progressKegiatan || monitoringData.progressKegiatan || '-'} ({monitoringData.initialData?.persentaseKegiatan || monitoringData.persentaseKegiatan || '0%'})</div>
                         </td>
                         <td>
-                          <div style={{ fontSize: '0.9rem', color: '#c0392b' }}>{monitoringData.initialData?.hambatan || monitoringData.hambatan || '-'}</div>
+                          <div style={{ fontSize: '0.9rem', color: '#c0392b' }}>
+                            <div dangerouslySetInnerHTML={{ __html: monitoringData.initialData?.hambatan || monitoringData.hambatan || '-' }} />
+                          </div>
                           {(monitoringData.initialData?.keterangan || monitoringData.keterangan) && (
-                            <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>Ket: {monitoringData.initialData?.keterangan || monitoringData.keterangan}</div>
+                            <div style={{ fontSize: '0.85rem', color: 'var(--color-text-main)', marginTop: '0.25rem' }}>
+                              <span style={{ fontWeight: 700, color: 'var(--color-text-muted)' }}>Ket:</span> <div dangerouslySetInnerHTML={{ __html: monitoringData.initialData?.keterangan || monitoringData.keterangan }} />
+                            </div>
+                          )}
+                          {(monitoringData.initialData?.linkDokumen || monitoringData.linkDokumen) && (
+                            <div style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>
+                              <a href={monitoringData.initialData?.linkDokumen || monitoringData.linkDokumen} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-secondary-shadow)', textDecoration: 'underline', fontWeight: 600 }}>Lihat Dokumen</a>
+                            </div>
                           )}
                         </td>
                         <td>
@@ -794,9 +803,18 @@ Riwayat Hambatan Historis:
                             <div style={{ fontWeight: 700 }}>{rep.progressKegiatan || '-'} ({rep.persentaseKegiatan || '0%'})</div>
                           </td>
                           <td>
-                            <div style={{ fontSize: '0.9rem', color: '#c0392b' }}>{rep.hambatan || '-'}</div>
+                            <div style={{ fontSize: '0.9rem', color: '#c0392b' }}>
+                              <div dangerouslySetInnerHTML={{ __html: rep.hambatan || '-' }} />
+                            </div>
                             {rep.keterangan && (
-                              <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>Ket: {rep.keterangan}</div>
+                              <div style={{ fontSize: '0.85rem', color: 'var(--color-text-main)', marginTop: '0.25rem' }}>
+                                <span style={{ fontWeight: 700, color: 'var(--color-text-muted)' }}>Ket:</span> <div dangerouslySetInnerHTML={{ __html: rep.keterangan }} />
+                              </div>
+                            )}
+                            {rep.linkDokumen && (
+                              <div style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>
+                                <a href={rep.linkDokumen} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-secondary-shadow)', textDecoration: 'underline', fontWeight: 600 }}>Lihat Dokumen</a>
+                              </div>
                             )}
                           </td>
                           <td>

@@ -3,6 +3,8 @@ import { Lock, Send, Clock, Activity, FileText, Plus, X, ShieldAlert } from 'luc
 import { useParams } from 'react-router-dom';
 import { getPermohonanById, updatePermohonan } from '../data/store';
 import ReactMarkdown from 'react-markdown';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
 function PemohonPortal() {
   const { linkId } = useParams();
@@ -23,6 +25,7 @@ function PemohonPortal() {
   const [persentaseKegiatan, setPersentaseKegiatan] = useState('');
   const [hambatan, setHambatan] = useState('');
   const [keterangan, setKeterangan] = useState('');
+  const [linkDokumen, setLinkDokumen] = useState('');
 
   const formatRupiah = (value) => {
     const numberString = value.replace(/[^,\d]/g, '').toString();
@@ -71,13 +74,15 @@ function PemohonPortal() {
           persentaseKegiatan: `${persentaseKegiatan}%`,
           hambatan: hambatan,
           keterangan: keterangan,
+          linkDokumen: linkDokumen,
           lastUpdate: dateStr,
           initialData: {
             date: dateStr,
             progressKegiatan: progressKegiatan,
             persentaseKegiatan: `${persentaseKegiatan}%`,
             hambatan: hambatan,
-            keterangan: keterangan
+            keterangan: keterangan,
+            linkDokumen: linkDokumen
           },
           reports: []
         }
@@ -91,7 +96,8 @@ function PemohonPortal() {
         progressKegiatan: progressKegiatan,
         persentaseKegiatan: `${persentaseKegiatan}%`,
         hambatan: hambatan,
-        keterangan: keterangan
+        keterangan: keterangan,
+        linkDokumen: linkDokumen
       };
       
       const updatedMonitoring = {
@@ -100,13 +106,15 @@ function PemohonPortal() {
         persentaseKegiatan: `${persentaseKegiatan}%`,
         hambatan: hambatan,
         keterangan: keterangan,
+        linkDokumen: linkDokumen,
         lastUpdate: dateStr,
         initialData: projectData.monitoring.initialData || {
           date: projectData.monitoring.lastUpdate,
           progressKegiatan: projectData.monitoring.progressKegiatan,
           persentaseKegiatan: projectData.monitoring.persentaseKegiatan,
           hambatan: projectData.monitoring.hambatan,
-          keterangan: projectData.monitoring.keterangan
+          keterangan: projectData.monitoring.keterangan,
+          linkDokumen: projectData.monitoring.linkDokumen
         },
         reports: [...(projectData.monitoring.reports || []), newReport]
       };
@@ -124,6 +132,7 @@ function PemohonPortal() {
     setPersentaseKegiatan('');
     setHambatan('');
     setKeterangan('');
+    setLinkDokumen('');
   };
 
   if (!isUnlocked || !projectData) {
@@ -208,12 +217,21 @@ function PemohonPortal() {
 
         <div className="form-group" style={{ marginBottom: '1.5rem' }}>
           <label className="form-label" style={{ fontWeight: 600 }}>Hambatan / Kendala</label>
-          <textarea className="form-input" rows="3" placeholder="Tuliskan hambatan atau kendala yang dihadapi di lapangan..." value={hambatan} onChange={e => setHambatan(e.target.value)}></textarea>
+          <div style={{ background: 'white' }}>
+            <ReactQuill theme="snow" value={hambatan} onChange={setHambatan} placeholder="Tuliskan hambatan atau kendala yang dihadapi di lapangan..." />
+          </div>
         </div>
 
-        <div className="form-group">
-          <label className="form-label" style={{ fontWeight: 600 }}>Keterangan Tambahan</label>
-          <textarea className="form-input" rows="2" placeholder="Catatan tambahan lainnya (opsional)..." value={keterangan} onChange={e => setKeterangan(e.target.value)}></textarea>
+        <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+          <label className="form-label" style={{ fontWeight: 600 }}>Keterangan Tambahan / Catatan</label>
+          <div style={{ background: 'white' }}>
+            <ReactQuill theme="snow" value={keterangan} onChange={setKeterangan} placeholder="Catatan tambahan lainnya (opsional)..." />
+          </div>
+        </div>
+
+        <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+          <label className="form-label" style={{ fontWeight: 600 }}>Link Dokumen Laporan (Google Drive / Lainnya)</label>
+          <input type="url" className="form-input" placeholder="https://..." value={linkDokumen} onChange={e => setLinkDokumen(e.target.value)} />
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
@@ -297,9 +315,20 @@ function PemohonPortal() {
                       <div style={{ fontWeight: 700 }}>{projectData.monitoring.initialData?.progressKegiatan || projectData.monitoring.progressKegiatan || '-'} ({projectData.monitoring.initialData?.persentaseKegiatan || projectData.monitoring.persentaseKegiatan || '0%'})</div>
                     </td>
                     <td>
-                      <div style={{ fontSize: '0.9rem', color: '#c0392b' }}>{projectData.monitoring.initialData?.hambatan || projectData.monitoring.hambatan || '-'}</div>
+                      <div style={{ fontSize: '0.9rem', color: '#c0392b' }}>
+                        <div dangerouslySetInnerHTML={{ __html: projectData.monitoring.initialData?.hambatan || projectData.monitoring.hambatan || '-' }} />
+                      </div>
                       {(projectData.monitoring.initialData?.keterangan || projectData.monitoring.keterangan) && (
-                        <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: '0.5rem' }}>Ket: {projectData.monitoring.initialData?.keterangan || projectData.monitoring.keterangan}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--color-text-main)', marginTop: '0.5rem' }}>
+                          <span style={{ fontWeight: 700, color: 'var(--color-text-muted)' }}>Ket:</span> <div dangerouslySetInnerHTML={{ __html: projectData.monitoring.initialData?.keterangan || projectData.monitoring.keterangan }} />
+                        </div>
+                      )}
+                      {(projectData.monitoring.initialData?.linkDokumen || projectData.monitoring.linkDokumen) && (
+                        <div style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>
+                          <a href={projectData.monitoring.initialData?.linkDokumen || projectData.monitoring.linkDokumen} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-secondary-shadow)', textDecoration: 'underline', fontWeight: 600 }}>
+                            Lihat Dokumen
+                          </a>
+                        </div>
                       )}
                     </td>
                     <td>
@@ -331,9 +360,20 @@ function PemohonPortal() {
                         <div style={{ fontWeight: 700 }}>{rep.progressKegiatan || '-'} ({rep.persentaseKegiatan || '0%'})</div>
                       </td>
                       <td>
-                        <div style={{ fontSize: '0.9rem', color: '#c0392b' }}>{rep.hambatan || '-'}</div>
+                        <div style={{ fontSize: '0.9rem', color: '#c0392b' }}>
+                          <div dangerouslySetInnerHTML={{ __html: rep.hambatan || '-' }} />
+                        </div>
                         {rep.keterangan && (
-                          <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: '0.5rem' }}>Ket: {rep.keterangan}</div>
+                          <div style={{ fontSize: '0.85rem', color: 'var(--color-text-main)', marginTop: '0.5rem' }}>
+                            <span style={{ fontWeight: 700, color: 'var(--color-text-muted)' }}>Ket:</span> <div dangerouslySetInnerHTML={{ __html: rep.keterangan }} />
+                          </div>
+                        )}
+                        {rep.linkDokumen && (
+                          <div style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>
+                            <a href={rep.linkDokumen} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-secondary-shadow)', textDecoration: 'underline', fontWeight: 600 }}>
+                              Lihat Dokumen
+                            </a>
+                          </div>
                         )}
                       </td>
                       <td>
