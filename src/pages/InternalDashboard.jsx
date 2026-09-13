@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ShieldAlert, CheckCircle, Activity, Link as LinkIcon, Plus, X, Clock, FileText, Trash2, AlertTriangle, AlertCircle, ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getAllPermohonan, deletePermohonan } from '../data/store';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 function InternalDashboard() {
   const [permohonanList, setPermohonanList] = useState([]);
@@ -31,6 +32,18 @@ function InternalDashboard() {
   
   // Filter new permohonan (currentStep < 5)
   const newPermohonan = permohonanList.filter(p => p.currentStep < 5);
+
+  const highRiskCount = activities.filter(a => a.monitoring?.risk === 'high').length;
+  const mediumRiskCount = activities.filter(a => a.monitoring?.risk === 'medium').length;
+  const lowRiskCount = activities.filter(a => a.monitoring?.risk === 'low').length;
+  const otherCount = permohonanList.length - (highRiskCount + mediumRiskCount + lowRiskCount);
+
+  const pieData = [
+    { name: 'Risiko Tinggi', value: highRiskCount, color: '#ea2b2b' },
+    { name: 'Risiko Sedang', value: mediumRiskCount, color: '#e5b400' },
+    { name: 'Risiko Rendah', value: lowRiskCount, color: '#58a700' },
+    { name: 'Belum Dinilai / Lainnya', value: otherCount, color: '#afafaf' }
+  ].filter(d => d.value > 0);
 
   return (
     <div>
@@ -102,6 +115,32 @@ function InternalDashboard() {
             <h3 style={{ marginBottom: 0, fontSize: '2rem', color: 'var(--color-primary-shadow)' }}>{activities.filter(a => a.monitoring?.risk === 'low').length}</h3>
             <p style={{ margin: 0, fontWeight: 700, color: 'var(--color-text-muted)' }}>Proyek Risiko Rendah</p>
           </div>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: '2rem', padding: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <h2 style={{ marginBottom: '1.5rem' }}>Distribusi Risiko Permohonan</h2>
+        <div style={{ height: '350px', width: '100%', maxWidth: '600px' }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={pieData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                outerRadius={120}
+                fill="#8884d8"
+                dataKey="value"
+                label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+              >
+                {pieData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(value) => [value, 'Total Permohonan']} />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
