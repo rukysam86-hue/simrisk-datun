@@ -335,6 +335,18 @@ function PemohonPortal() {
                       {projectData.monitoring.adminNotes && (
                          <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: '0.5rem' }}>{projectData.monitoring.adminNotes}</div>
                       )}
+                      {(projectData.monitoring.initialData?.saranDriveUrl || projectData.monitoring.saranDriveUrl) && (
+                        <div style={{ marginTop: '0.6rem' }}>
+                          <a
+                            href={projectData.monitoring.initialData?.saranDriveUrl || projectData.monitoring.saranDriveUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: '#8e44ad', color: 'white', borderRadius: '8px', padding: '0.3rem 0.75rem', fontWeight: 700, fontSize: '0.8rem', textDecoration: 'none' }}
+                          >
+                            ⬇ Unduh Saran Kejati
+                          </a>
+                        </div>
+                      )}
                       {!projectData.monitoring.risk && <span style={{ color: 'var(--color-text-muted)', fontStyle: 'italic', fontSize: '0.85rem' }}>Belum dinilai</span>}
                     </td>
                     <td>
@@ -379,6 +391,18 @@ function PemohonPortal() {
                              </div>
                              {rep.adminNotes && (
                                 <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: '0.5rem' }}>{rep.adminNotes}</div>
+                             )}
+                             {rep.saranDriveUrl && (
+                               <div style={{ marginTop: '0.6rem' }}>
+                                 <a
+                                   href={rep.saranDriveUrl}
+                                   target="_blank"
+                                   rel="noopener noreferrer"
+                                   style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: '#8e44ad', color: 'white', borderRadius: '8px', padding: '0.3rem 0.75rem', fontWeight: 700, fontSize: '0.8rem', textDecoration: 'none' }}
+                                 >
+                                   ⬇ Unduh Saran Kejati
+                                 </a>
+                               </div>
                              )}
                           </>
                         ) : (

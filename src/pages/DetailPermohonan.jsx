@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, Clock, FileText, ShieldAlert, Download, Edit3, Save, X, Trash2, Activity, Sparkles, Plus, ExternalLink, Copy } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Clock, FileText, ShieldAlert, Download, Edit3, Save, X, Trash2, Activity, Sparkles, Plus, ExternalLink, Copy, FileDown } from 'lucide-react';
 import { getPermohonanById, updatePermohonan, deletePermohonan } from '../data/store';
 import ReactMarkdown from 'react-markdown';
+import { downloadAnalysisAsDocx } from '../lib/docxGenerator';
 
 function DetailPermohonan() {
   const { id } = useParams();
@@ -27,6 +28,7 @@ function DetailPermohonan() {
   
   // -1 means assessing "Data Awal", 0+ means assessing a report index. null means closed.
   const [assessingReportIndex, setAssessingReportIndex] = useState(null);
+  const [adminSaranDriveUrl, setAdminSaranDriveUrl] = useState('');
 
   // States for Admin inputting Data Awal directly
   const [isAddingInitialData, setIsAddingInitialData] = useState(false);
@@ -292,18 +294,21 @@ Riwayat Hambatan Historis:
         ...(newMonitoringData.initialData || {}),
         aiAnalysis: aiResponse,
         risk: adminRiskLevel,
-        adminNotes: adminRiskNotes
+        adminNotes: adminRiskNotes,
+        saranDriveUrl: adminSaranDriveUrl,
       };
       newMonitoringData.aiAnalysis = aiResponse;
       newMonitoringData.risk = adminRiskLevel;
       newMonitoringData.adminNotes = adminRiskNotes;
+      newMonitoringData.saranDriveUrl = adminSaranDriveUrl;
     } else {
       newMonitoringData.reports = [...(newMonitoringData.reports || [])];
       newMonitoringData.reports[targetIdx] = {
         ...newMonitoringData.reports[targetIdx],
         aiAnalysis: aiResponse,
         risk: adminRiskLevel,
-        adminNotes: adminRiskNotes
+        adminNotes: adminRiskNotes,
+        saranDriveUrl: adminSaranDriveUrl,
       };
     }
 
@@ -339,11 +344,13 @@ Riwayat Hambatan Historis:
       setAiResponse(monitoringData?.initialData?.aiAnalysis || monitoringData?.aiAnalysis || '');
       setAdminRiskLevel(monitoringData?.initialData?.risk || monitoringData?.risk || 'low');
       setAdminRiskNotes(monitoringData?.initialData?.adminNotes || monitoringData?.adminNotes || '');
+      setAdminSaranDriveUrl(monitoringData?.initialData?.saranDriveUrl || monitoringData?.saranDriveUrl || '');
     } else {
       const rep = (monitoringData?.reports || [])[index] || {};
       setAiResponse(rep.aiAnalysis || '');
       setAdminRiskLevel(rep.risk || 'low');
       setAdminRiskNotes(rep.adminNotes || '');
+      setAdminSaranDriveUrl(rep.saranDriveUrl || '');
     }
   };
 
@@ -774,6 +781,13 @@ Riwayat Hambatan Historis:
                                   {monitoringData.initialData?.adminNotes || monitoringData.adminNotes}
                                 </div>
                               )}
+                              {(monitoringData.initialData?.saranDriveUrl || monitoringData.saranDriveUrl) && (
+                                <div style={{ marginTop: '0.5rem' }}>
+                                  <a href={monitoringData.initialData?.saranDriveUrl || monitoringData.saranDriveUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: '#8e44ad', textDecoration: 'underline', fontWeight: 700, fontSize: '0.8rem' }}>
+                                    <Download size={12} /> Unduh Saran Kejati
+                                  </a>
+                                </div>
+                              )}
                             </div>
                           ) : (
                             <span style={{ color: '#e67e22', fontStyle: 'italic', fontSize: '0.85rem', fontWeight: 600 }}>Belum Dinilai</span>
@@ -826,6 +840,13 @@ Riwayat Hambatan Historis:
                                 {rep.adminNotes && (
                                   <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: '0.35rem' }}>{rep.adminNotes}</div>
                                 )}
+                                {rep.saranDriveUrl && (
+                                  <div style={{ marginTop: '0.5rem' }}>
+                                    <a href={rep.saranDriveUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: '#8e44ad', textDecoration: 'underline', fontWeight: 700, fontSize: '0.8rem' }}>
+                                      <Download size={12} /> Unduh Saran Kejati
+                                    </a>
+                                  </div>
+                                )}
                               </div>
                             ) : (
                               <span style={{ color: '#e67e22', fontStyle: 'italic', fontSize: '0.85rem', fontWeight: 600 }}>Belum Dinilai</span>
@@ -865,15 +886,26 @@ Riwayat Hambatan Historis:
                       <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#5b2c6f' }}>
                         ✨ Analisis Risiko AI Gemini (Persona JPN & Ahli Hukum Perdata/TUN)
                       </span>
-                      {aiResponse && (
-                        <button 
-                          className="btn btn-outline" 
-                          style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', borderColor: '#8e44ad', color: '#8e44ad' }} 
-                          onClick={() => setIsEditingAiResponse(!isEditingAiResponse)}
-                        >
-                          {isEditingAiResponse ? 'Lihat Markdown' : 'Edit Analisis'}
-                        </button>
-                      )}
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        {aiResponse && (
+                          <>
+                            <button
+                              className="btn btn-outline"
+                              style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', borderColor: '#27ae60', color: '#27ae60', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                              onClick={() => downloadAnalysisAsDocx(monitoringData?.kegiatan || id, monitoringData?.kegiatan, aiResponse, 'Data Awal')}
+                            >
+                              <FileDown size={14} /> Unduh Word
+                            </button>
+                            <button
+                              className="btn btn-outline"
+                              style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', borderColor: '#8e44ad', color: '#8e44ad' }}
+                              onClick={() => setIsEditingAiResponse(!isEditingAiResponse)}
+                            >
+                              {isEditingAiResponse ? 'Lihat Markdown' : 'Edit Analisis'}
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
 
                     {!aiResponse ? (
@@ -922,6 +954,18 @@ Riwayat Hambatan Historis:
                         value={adminRiskNotes} 
                         onChange={e => setAdminRiskNotes(e.target.value)} 
                         placeholder="Tuliskan instruksi langkah mitigasi yang harus dipenuhi oleh pemohon pada pelaporan berikutnya..."
+                      />
+                    </div>
+
+                    <div style={{ marginBottom: '1.25rem' }}>
+                      <label className="form-label" style={{ fontWeight: 600 }}>Link Dokumen Saran (Google Drive / PDF)</label>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '0.5rem', marginTop: 0 }}>Upload file Word yang diunduh ke Google Drive, lalu tempel link-nya di sini. Pemohon dapat mengunduhnya dari portal mereka.</p>
+                      <input
+                        type="url"
+                        className="form-input"
+                        placeholder="https://drive.google.com/..."
+                        value={adminSaranDriveUrl}
+                        onChange={e => setAdminSaranDriveUrl(e.target.value)}
                       />
                     </div>
 
@@ -989,26 +1033,40 @@ Riwayat Hambatan Historis:
               <div>
                 <span style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', fontWeight: 700, display: 'block', marginBottom: '0.5rem' }}>Hambatan / Kendala yang Dilaporkan:</span>
                 <div style={{ background: '#fff0f0', color: '#c0392b', border: '1px solid #ffcccc', padding: '1rem', borderRadius: '8px' }}>
-                  {assessingReportIndex === -1 
-                    ? (monitoringData?.initialData?.hambatan || monitoringData?.hambatan || '-') 
-                    : (monitoringData?.reports[assessingReportIndex]?.hambatan || '-')}
+                  <div dangerouslySetInnerHTML={{ __html: assessingReportIndex === -1
+                    ? (monitoringData?.initialData?.hambatan || monitoringData?.hambatan || '-')
+                    : (monitoringData?.reports[assessingReportIndex]?.hambatan || '-') }} />
                 </div>
               </div>
 
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                   <span style={{ fontSize: '0.9rem', color: '#8e44ad', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                     ✨ Hasil Analisis Gemini
-                   </span>
-                   {aiResponse && (
-                     <button 
-                       className="btn btn-outline" 
-                       style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', borderColor: '#8e44ad', color: '#8e44ad' }} 
-                       onClick={() => setIsEditingAiResponse(!isEditingAiResponse)}
-                     >
-                       {isEditingAiResponse ? 'Tutup Edit' : 'Edit Analisis'}
-                     </button>
-                   )}
+                  <span style={{ fontSize: '0.9rem', color: '#8e44ad', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    ✨ Hasil Analisis Gemini
+                  </span>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    {aiResponse && (
+                      <>
+                        <button
+                          className="btn btn-outline"
+                          style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', borderColor: '#27ae60', color: '#27ae60', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                          onClick={() => {
+                            const label = assessingReportIndex === -1 ? 'Data Awal' : `Laporan #${assessingReportIndex + 1}`;
+                            downloadAnalysisAsDocx(monitoringData?.kegiatan || id, monitoringData?.kegiatan, aiResponse, label);
+                          }}
+                        >
+                          <FileDown size={14} /> Unduh Word
+                        </button>
+                        <button
+                          className="btn btn-outline"
+                          style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', borderColor: '#8e44ad', color: '#8e44ad' }}
+                          onClick={() => setIsEditingAiResponse(!isEditingAiResponse)}
+                        >
+                          {isEditingAiResponse ? 'Tutup Edit' : 'Edit Analisis'}
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {!aiResponse ? (
@@ -1046,6 +1104,18 @@ Riwayat Hambatan Historis:
                 <div style={{ marginBottom: '1rem' }}>
                   <label className="form-label" style={{ fontWeight: 600 }}>Catatan / Instruksi untuk Pemohon</label>
                   <textarea className="form-input" rows="3" value={adminRiskNotes} onChange={e => setAdminRiskNotes(e.target.value)} placeholder="Tuliskan instruksi langkah mitigasi yang harus dipenuhi oleh pemohon pada pelaporan berikutnya..."></textarea>
+                </div>
+
+                <div style={{ marginBottom: '1rem' }}>
+                  <label className="form-label" style={{ fontWeight: 600 }}>Link Dokumen Saran (Google Drive / PDF)</label>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '0.5rem', marginTop: 0 }}>Upload file Word yang diunduh ke Google Drive, lalu tempel link-nya di sini. Pemohon dapat mengunduhnya dari portal mereka.</p>
+                  <input
+                    type="url"
+                    className="form-input"
+                    placeholder="https://drive.google.com/..."
+                    value={adminSaranDriveUrl}
+                    onChange={e => setAdminSaranDriveUrl(e.target.value)}
+                  />
                 </div>
               </div>
             </div>
