@@ -3,8 +3,7 @@ import { Lock, Send, Clock, Activity, FileText, Plus, X, ShieldAlert } from 'luc
 import { useParams } from 'react-router-dom';
 import { getPermohonanById, updatePermohonan } from '../data/store';
 import ReactMarkdown from 'react-markdown';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import WysiwygEditor from '../lib/WysiwygEditor';
 
 function PemohonPortal() {
   const { linkId } = useParams();
@@ -217,16 +216,12 @@ function PemohonPortal() {
 
         <div className="form-group" style={{ marginBottom: '1.5rem' }}>
           <label className="form-label" style={{ fontWeight: 600 }}>Hambatan / Kendala</label>
-          <div style={{ background: 'white' }}>
-            <ReactQuill theme="snow" value={hambatan} onChange={setHambatan} placeholder="Tuliskan hambatan atau kendala yang dihadapi di lapangan..." />
-          </div>
+          <WysiwygEditor value={hambatan} onChange={setHambatan} placeholder="Tuliskan hambatan atau kendala yang dihadapi di lapangan..." />
         </div>
 
         <div className="form-group" style={{ marginBottom: '1.5rem' }}>
           <label className="form-label" style={{ fontWeight: 600 }}>Keterangan Tambahan / Catatan</label>
-          <div style={{ background: 'white' }}>
-            <ReactQuill theme="snow" value={keterangan} onChange={setKeterangan} placeholder="Catatan tambahan lainnya (opsional)..." />
-          </div>
+          <WysiwygEditor value={keterangan} onChange={setKeterangan} placeholder="Catatan tambahan lainnya (opsional)..." />
         </div>
 
         <div className="form-group" style={{ marginBottom: '1.5rem' }}>
