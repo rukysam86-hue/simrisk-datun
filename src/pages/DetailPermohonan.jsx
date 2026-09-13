@@ -684,8 +684,7 @@ Riwayat Hambatan Historis:
             </div>
           ) : (
             /* KASUS 2: Data Awal Sudah Ada */
-            <>
-              {/* Card 1: Data Awal / Konteks Proyek */}
+              /* Card 1: Data Awal / Konteks Proyek */
               <div className="card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.75rem' }}>
                   <h2 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -707,8 +706,14 @@ Riwayat Hambatan Historis:
                     </div>
                   </div>
                   <div>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Progres Kegiatan</span>
-                    <div style={{ fontWeight: 700 }}>{monitoringData.initialData?.progressKegiatan || monitoringData.progressKegiatan || '-'} ({monitoringData.initialData?.persentaseKegiatan || monitoringData.persentaseKegiatan || '0%'})</div>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Progres Kegiatan (Terbaru)</span>
+                    <div style={{ fontWeight: 700 }}>
+                      {(() => {
+                        const hasReports = monitoringData.reports && monitoringData.reports.length > 0;
+                        const latest = hasReports ? monitoringData.reports[monitoringData.reports.length - 1] : monitoringData.initialData;
+                        return `${latest?.progressKegiatan || monitoringData.progressKegiatan || '-'} (${latest?.persentaseKegiatan || monitoringData.persentaseKegiatan || '0%'})`;
+                      })()}
+                    </div>
                   </div>
                   <div>
                     <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Terakhir Update</span>
@@ -722,11 +727,19 @@ Riwayat Hambatan Historis:
                 </div>
                 
                 <div>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Hambatan / Kendala</span>
-                  <div style={{ background: '#fff0f0', color: '#c0392b', border: '1px solid #ffcccc', padding: '0.75rem', borderRadius: '4px', fontSize: '0.9rem' }}>{monitoringData.initialData?.hambatan || monitoringData.hambatan || '-'}</div>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Hambatan / Kendala Awal</span>
+                  <div style={{ background: '#fff0f0', color: '#c0392b', border: '1px solid #ffcccc', padding: '0.75rem', borderRadius: '4px', fontSize: '0.9rem' }}>
+                    <div dangerouslySetInnerHTML={{ __html: monitoringData.initialData?.hambatan || monitoringData.hambatan || '-' }} />
+                  </div>
                 </div>
               </div>
+            )}
+        </div>
+      </div>
 
+      {/* Full Width Section Below Grid */}
+      {monitoringData && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', marginTop: '1rem' }}>
               {/* Card 2: Tabel Riwayat Laporan Progres & Penilaian */}
               <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                 <div style={{ padding: '1.25rem 1.5rem', borderBottom: '2px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fafafa' }}>
@@ -975,11 +988,8 @@ Riwayat Hambatan Historis:
                   </div>
                 </div>
               )}
-            </>
-          )}
-
         </div>
-      </div>
+      )}
 
       {/* Modal PDF Viewer */}
       {isViewingPdf && (
