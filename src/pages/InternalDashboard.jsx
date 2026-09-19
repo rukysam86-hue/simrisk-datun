@@ -336,6 +336,290 @@ function PermohonanTable({ data, onDelete }) {
   );
 }
 
+// ─── Komponen Badge Risiko ───────────────────────────────────
+const RISK_CONFIG = {
+  high:   { label: 'Risiko Tinggi',  bg: '#ffe2e2', color: '#ea2b2b', border: '#ffb3b3', dot: '#ff4b4b' },
+  medium: { label: 'Risiko Sedang',  bg: '#fff5cc', color: '#a07800', border: '#ffe066', dot: '#ffc800' },
+  low:    { label: 'Risiko Rendah',  bg: '#e5f9d6', color: '#58a700', border: '#bce699', dot: '#58cc02' },
+};
+
+function RiskBadge({ risk }) {
+  if (!risk) return <span style={{ color: 'var(--color-text-muted)', fontWeight: 700, fontSize: '0.82rem' }}>—</span>;
+  const r = RISK_CONFIG[risk] || { label: risk, bg: '#f0f0f0', color: '#555', border: '#ccc', dot: '#aaa' };
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+      padding: '0.28rem 0.7rem',
+      borderRadius: '99px',
+      fontSize: '0.72rem', fontWeight: 800,
+      letterSpacing: '0.06em', textTransform: 'uppercase',
+      background: r.bg, color: r.color, border: `2px solid ${r.border}`,
+      whiteSpace: 'nowrap',
+    }}>
+      <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: r.dot, flexShrink: 0 }} />
+      {r.label}
+    </span>
+  );
+}
+
+// ─── Komponen Progress Bar ────────────────────────────────────
+function ProgressBar({ value }) {
+  const pct = parseInt(value) || 0;
+  const color = pct >= 80 ? '#58cc02' : pct >= 40 ? '#ffc800' : '#1cb0f6';
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <div style={{
+        flex: 1, height: '8px',
+        background: '#efefef', borderRadius: '99px',
+        overflow: 'hidden', minWidth: '60px',
+      }}>
+        <div style={{
+          width: `${Math.min(pct, 100)}%`, height: '100%',
+          background: color, borderRadius: '99px',
+          transition: 'width 0.4s ease',
+        }} />
+      </div>
+      <span style={{ fontWeight: 800, fontSize: '0.82rem', minWidth: '36px', color: color }}>
+        {value || '0%'}
+      </span>
+    </div>
+  );
+}
+
+// ─── Tabel Kegiatan Aktif ─────────────────────────────────────
+function KegiatanTable({ data, onDelete }) {
+  const [search, setSearch]           = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize]       = useState(5);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return data;
+    const q = search.toLowerCase();
+    return data.filter(p =>
+      p.suratData?.perihal?.toLowerCase().includes(q)   ||
+      p.suratData?.asalSurat?.toLowerCase().includes(q) ||
+      p.monitoring?.keterangan?.toLowerCase().includes(q)
+    );
+  }, [data, search]);
+
+  useEffect(() => { setCurrentPage(1); }, [search]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paginated  = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  return (
+    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+
+      {/* Header */}
+      <div style={{
+        padding: '1.25rem 1.5rem',
+        borderBottom: '2px solid var(--color-border)',
+        background: 'linear-gradient(135deg, #f0fdf4 0%, #e5f9d6 100%)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        flexWrap: 'wrap', gap: '0.75rem',
+      }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: '1.15rem', color: 'var(--color-primary-shadow)' }}>
+            Daftar Kegiatan Aktif
+            <span style={{
+              marginLeft: '0.6rem', display: 'inline-flex', alignItems: 'center',
+              background: 'var(--color-primary)', color: 'white',
+              borderRadius: '99px', padding: '0.1rem 0.6rem',
+              fontSize: '0.8rem', fontWeight: 800, verticalAlign: 'middle',
+            }}>
+              Berlangsung
+            </span>
+          </h2>
+          <p style={{ margin: '0.25rem 0 0', fontSize: '0.82rem', color: 'var(--color-primary-shadow)', fontWeight: 700, opacity: 0.75 }}>
+            {data.length} kegiatan sedang didampingi
+          </p>
+        </div>
+
+        {/* Search */}
+        <div style={{ position: 'relative', minWidth: '240px' }}>
+          <Search size={16} style={{
+            position: 'absolute', left: '0.75rem', top: '50%',
+            transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none',
+          }} />
+          <input
+            type="text"
+            placeholder="Cari kegiatan, instansi, keterangan..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{
+              width: '100%', paddingLeft: '2.25rem', paddingRight: search ? '2.25rem' : '0.9rem',
+              paddingTop: '0.55rem', paddingBottom: '0.55rem',
+              border: '2px solid rgba(88,167,0,0.3)', borderRadius: '10px',
+              fontSize: '0.875rem', fontWeight: 600,
+              background: 'white', color: 'var(--color-text-main)',
+              outline: 'none', transition: 'border-color 0.2s',
+            }}
+            onFocus={e => e.target.style.borderColor = 'var(--color-primary)'}
+            onBlur={e => e.target.style.borderColor = 'rgba(88,167,0,0.3)'}
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              style={{
+                position: 'absolute', right: '0.6rem', top: '50%',
+                transform: 'translateY(-50%)', background: 'none', border: 'none',
+                cursor: 'pointer', color: 'var(--color-text-muted)',
+                display: 'flex', alignItems: 'center', padding: '2px',
+              }}
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Table */}
+      <div style={{ overflowX: 'auto' }}>
+        <table className="table" style={{ minWidth: '780px' }}>
+          <thead>
+            <tr>
+              <th style={{ width: '36px', textAlign: 'center' }}>#</th>
+              <th>Instansi & Kegiatan</th>
+              <th style={{ textAlign: 'center' }}>Risiko</th>
+              <th>Nilai Anggaran</th>
+              <th>Progres</th>
+              <th>Keterangan</th>
+              <th style={{ textAlign: 'center' }}>Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {paginated.length === 0 ? (
+              <tr>
+                <td colSpan="7" style={{ textAlign: 'center', padding: '2.5rem 1rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                    <Search size={32} color="var(--color-text-muted)" strokeWidth={1.5} />
+                    <span style={{ color: 'var(--color-text-muted)', fontWeight: 700, fontSize: '0.9rem' }}>
+                      {search ? `Tidak ada hasil untuk "${search}"` : 'Tidak ada kegiatan aktif.'}
+                    </span>
+                    {search && (
+                      <button onClick={() => setSearch('')} style={{
+                        marginTop: '0.25rem', background: 'none', border: 'none',
+                        color: 'var(--color-primary)', fontWeight: 700, cursor: 'pointer',
+                        fontSize: '0.85rem', textDecoration: 'underline',
+                      }}>
+                        Hapus pencarian
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              paginated.map((act, idx) => (
+                <tr key={act.id}>
+                  {/* No */}
+                  <td style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontWeight: 800, fontSize: '0.85rem' }}>
+                    {(currentPage - 1) * pageSize + idx + 1}
+                  </td>
+
+                  {/* Instansi & Perihal */}
+                  <td>
+                    <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#1a2332', marginBottom: '2px' }}>
+                      {act.suratData?.perihal || '-'}
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 700 }}>
+                      {act.suratData?.asalSurat || '-'}
+                    </div>
+                  </td>
+
+                  {/* Badge Risiko */}
+                  <td style={{ textAlign: 'center' }}>
+                    <RiskBadge risk={act.monitoring?.risk} />
+                  </td>
+
+                  {/* Nilai Anggaran */}
+                  <td>
+                    <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#1a2332', whiteSpace: 'nowrap' }}>
+                      {act.monitoring?.nilai
+                        ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(act.monitoring.nilai)
+                        : <span style={{ color: 'var(--color-text-muted)', fontWeight: 700 }}>—</span>}
+                    </div>
+                  </td>
+
+                  {/* Progres */}
+                  <td style={{ minWidth: '140px' }}>
+                    <ProgressBar value={act.monitoring?.persentaseKegiatan} />
+                    {act.monitoring?.progressKegiatan && (
+                      <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', marginTop: '4px', lineHeight: 1.4 }}>
+                        {act.monitoring.progressKegiatan}
+                      </div>
+                    )}
+                  </td>
+
+                  {/* Keterangan & Update */}
+                  <td style={{ maxWidth: '200px' }}>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--color-text-main)', marginBottom: '3px', lineHeight: 1.4 }}>
+                      {act.monitoring?.keterangan || <span style={{ color: 'var(--color-text-muted)' }}>—</span>}
+                    </div>
+                    {act.monitoring?.lastUpdate && (
+                      <div style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                        fontSize: '0.72rem', fontWeight: 700,
+                        color: 'var(--color-text-muted)',
+                        background: '#f5f5f5', borderRadius: '6px',
+                        padding: '0.15rem 0.45rem',
+                      }}>
+                        ⏱ {act.monitoring.lastUpdate}
+                      </div>
+                    )}
+                  </td>
+
+                  {/* Aksi */}
+                  <td style={{ textAlign: 'center' }}>
+                    <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
+                      <button
+                        className="btn btn-outline"
+                        style={{ padding: '0.45rem 0.6rem', borderRadius: '8px' }}
+                        title="Salin Link Akses Pemohon"
+                        onClick={() => {
+                          const url = `${window.location.origin}/portal/${act.id}`;
+                          navigator.clipboard.writeText(`Akses Link: ${url}\nPassword: ${act.id}`);
+                          alert('Link dan password akses pemohon disalin ke clipboard!');
+                        }}
+                      >
+                        <LinkIcon size={15} />
+                      </button>
+                      <Link
+                        to={`/permohonan/${act.id}`}
+                        className="btn btn-secondary"
+                        style={{ padding: '0.45rem 0.85rem', borderRadius: '8px', fontSize: '0.8rem' }}
+                      >
+                        Detail
+                      </Link>
+                      <button
+                        className="btn btn-outline"
+                        style={{ padding: '0.45rem 0.6rem', borderRadius: '8px', color: 'var(--color-danger-shadow)', borderColor: 'var(--color-danger-shadow)' }}
+                        onClick={() => onDelete(act.id)}
+                        title="Hapus Data"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={setPageSize}
+        totalItems={filtered.length}
+      />
+    </div>
+  );
+}
+
 // ─── Halaman Utama Dashboard ──────────────────────────────────
 function InternalDashboard() {
   const [permohonanList, setPermohonanList] = useState([]);
@@ -478,110 +762,7 @@ function InternalDashboard() {
       <PermohonanTable data={newPermohonan} onDelete={handleDelete} />
 
       {/* ── Tabel Kegiatan Aktif ── */}
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <div style={{ padding: '1.25rem 1.5rem', borderBottom: '2px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h2 style={{ margin: 0, fontSize: '1.15rem' }}>Daftar Kegiatan Aktif</h2>
-            <p style={{ margin: '0.25rem 0 0', fontSize: '0.82rem', color: 'var(--color-text-muted)', fontWeight: 700 }}>
-              {activities.length} kegiatan sedang berjalan
-            </p>
-          </div>
-        </div>
-        <div className="table-container" style={{ border: 'none', borderRadius: 0 }}>
-          <table className="table">
-            <thead>
-              <tr>
-                <th style={{ width: '40px', textAlign: 'center' }}>#</th>
-                <th>Instansi & Kegiatan</th>
-                <th>Nilai Anggaran</th>
-                <th>Progres Kegiatan</th>
-                <th>Keterangan & Update</th>
-                <th style={{ textAlign: 'center' }}>Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {activities.length === 0 ? (
-                <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--color-text-muted)', fontWeight: 700 }}>
-                    Tidak ada kegiatan aktif.
-                  </td>
-                </tr>
-              ) : (
-                activities.map((act, idx) => (
-                  <tr key={act.id}>
-                    <td style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontWeight: 800, fontSize: '0.85rem' }}>
-                      {idx + 1}
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <div style={{ fontWeight: 800 }}>{act.suratData?.perihal}</div>
-                        {act.monitoring?.risk && (
-                          <div
-                            title={act.monitoring.risk === 'high' ? 'Risiko Tinggi' : act.monitoring.risk === 'medium' ? 'Risiko Sedang' : 'Risiko Rendah'}
-                            style={{
-                              width: '12px', height: '12px', borderRadius: '50%', flexShrink: 0,
-                              backgroundColor: act.monitoring.risk === 'high' ? 'var(--color-danger)' : act.monitoring.risk === 'medium' ? 'var(--color-warning)' : 'var(--color-primary)'
-                            }}
-                          />
-                        )}
-                      </div>
-                      <div style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', fontWeight: 700 }}>{act.suratData?.asalSurat}</div>
-                    </td>
-                    <td style={{ fontWeight: 700 }}>
-                      {act.monitoring?.nilai ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(act.monitoring.nilai) : '-'}
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                        <span style={{ fontWeight: 800, minWidth: '40px' }}>Prog:</span>
-                        <div style={{ flex: 1, height: '8px', background: 'var(--color-surface)', borderRadius: '4px' }}>
-                          <div style={{ width: act.monitoring?.persentaseKegiatan || '0%', height: '100%', background: 'var(--color-primary)', borderRadius: '4px' }} />
-                        </div>
-                        <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>{act.monitoring?.persentaseKegiatan || '0%'}</span>
-                      </div>
-                      <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
-                        {act.monitoring?.progressKegiatan || '-'}
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ fontSize: '0.85rem', marginBottom: '0.25rem' }}>{act.monitoring?.keterangan || '-'}</div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-text-muted)' }}>
-                        Update: {act.monitoring?.lastUpdate || '-'}
-                      </div>
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
-                        <button
-                          className="btn btn-outline"
-                          style={{ padding: '0.45rem 0.6rem', borderRadius: '8px' }}
-                          title="Copy Secure Link Pemohon"
-                          onClick={() => {
-                            const url = `${window.location.origin}/portal/${act.id}`;
-                            navigator.clipboard.writeText(`Akses Link: ${url}\nPassword: ${act.id}`);
-                            alert('Link dan password akses pemohon disalin ke clipboard!');
-                          }}
-                        >
-                          <LinkIcon size={15} />
-                        </button>
-                        <Link to={`/permohonan/${act.id}`} className="btn btn-secondary" style={{ padding: '0.45rem 0.85rem', borderRadius: '8px', fontSize: '0.8rem' }}>
-                          Detail
-                        </Link>
-                        <button
-                          className="btn btn-outline"
-                          style={{ padding: '0.45rem 0.6rem', borderRadius: '8px', color: 'var(--color-danger-shadow)', borderColor: 'var(--color-danger-shadow)' }}
-                          onClick={() => handleDelete(act.id)}
-                          title="Hapus Data"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <KegiatanTable data={activities} onDelete={handleDelete} />
     </div>
   );
 }
