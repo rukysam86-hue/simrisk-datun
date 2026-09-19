@@ -14,6 +14,8 @@ const STEP_LABELS = {
 
 const PAGE_SIZE_OPTIONS = [5, 10, 20];
 
+const truncateText = (text, maxLength) => text && text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+
 // ─── Komponen Badge Status ────────────────────────────────────
 function StatusBadge({ step }) {
   const s = STEP_LABELS[step] || { label: `STEP ${step}`, bg: '#f0f0f0', color: '#555', border: '#ccc' };
@@ -269,10 +271,10 @@ function PermohonanTable({ data, onDelete }) {
 
                   {/* Instansi */}
                   <td>
-                    <div style={{ fontWeight: 800, fontSize: '0.92rem', color: '#1a2332' }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.85rem', color: '#1a2332' }}>
                       {act.suratData?.asalSurat || '-'}
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 700, marginTop: '2px' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 700, marginTop: '2px' }}>
                       {act.suratData?.tanggalSurat
                         ? new Date(act.suratData.tanggalSurat).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
                         : '-'}
@@ -281,11 +283,11 @@ function PermohonanTable({ data, onDelete }) {
 
                   {/* Nomor & Perihal */}
                   <td>
-                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--color-text-main)', marginBottom: '2px' }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--color-text-main)', marginBottom: '2px' }}>
                       {act.suratData?.perihal || '-'}
                     </div>
                     {act.suratData?.nomorSurat && (
-                      <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', fontWeight: 700, fontFamily: 'monospace' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 700, fontFamily: 'monospace' }}>
                         {act.suratData.nomorSurat}
                       </div>
                     )}
@@ -517,11 +519,11 @@ function KegiatanTable({ data, onDelete }) {
 
                   {/* Instansi & Perihal */}
                   <td>
-                    <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#1a2332', marginBottom: '2px' }}>
-                      {act.suratData?.perihal || '-'}
+                    <div style={{ fontWeight: 800, fontSize: '0.85rem', color: '#1a2332', marginBottom: '2px' }} title={act.suratData?.perihal}>
+                      {truncateText(act.suratData?.perihal, 32) || '-'}
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 700 }}>
-                      {act.suratData?.asalSurat || '-'}
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 700 }} title={act.suratData?.asalSurat}>
+                      {truncateText(act.suratData?.asalSurat, 32) || '-'}
                     </div>
                   </td>
 
@@ -532,7 +534,7 @@ function KegiatanTable({ data, onDelete }) {
 
                   {/* Nilai Anggaran */}
                   <td>
-                    <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#1a2332', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.85rem', color: '#1a2332', whiteSpace: 'nowrap' }}>
                       {act.monitoring?.nilai
                         ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(act.monitoring.nilai)
                         : <span style={{ color: 'var(--color-text-muted)', fontWeight: 700 }}>—</span>}
