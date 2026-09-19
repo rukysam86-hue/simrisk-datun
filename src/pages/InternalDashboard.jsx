@@ -483,14 +483,13 @@ function KegiatanTable({ data, onDelete }) {
               <th style={{ textAlign: 'center' }}>Risiko</th>
               <th>Nilai Anggaran</th>
               <th>Progres</th>
-              <th>Keterangan</th>
               <th style={{ textAlign: 'center' }}>Aksi</th>
             </tr>
           </thead>
           <tbody>
             {paginated.length === 0 ? (
               <tr>
-                <td colSpan="7" style={{ textAlign: 'center', padding: '2.5rem 1rem' }}>
+                <td colSpan="6" style={{ textAlign: 'center', padding: '2.5rem 1rem' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
                     <Search size={32} color="var(--color-text-muted)" strokeWidth={1.5} />
                     <span style={{ color: 'var(--color-text-muted)', fontWeight: 700, fontSize: '0.9rem' }}>
@@ -546,24 +545,6 @@ function KegiatanTable({ data, onDelete }) {
                     {act.monitoring?.progressKegiatan && (
                       <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', marginTop: '4px', lineHeight: 1.4 }}>
                         {act.monitoring.progressKegiatan}
-                      </div>
-                    )}
-                  </td>
-
-                  {/* Keterangan & Update */}
-                  <td style={{ maxWidth: '200px' }}>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--color-text-main)', marginBottom: '3px', lineHeight: 1.4 }}>
-                      {act.monitoring?.keterangan || <span style={{ color: 'var(--color-text-muted)' }}>—</span>}
-                    </div>
-                    {act.monitoring?.lastUpdate && (
-                      <div style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-                        fontSize: '0.72rem', fontWeight: 700,
-                        color: 'var(--color-text-muted)',
-                        background: '#f5f5f5', borderRadius: '6px',
-                        padding: '0.15rem 0.45rem',
-                      }}>
-                        ⏱ {act.monitoring.lastUpdate}
                       </div>
                     )}
                   </td>
