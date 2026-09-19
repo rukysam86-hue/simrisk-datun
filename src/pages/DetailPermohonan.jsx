@@ -382,20 +382,75 @@ Riwayat Hambatan Historis:
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
           {/* Status Card */}
-          <div className="card" style={{ border: `2px solid ${(currentStep === 2 || currentStep === 4) ? 'var(--color-warning-shadow)' : (currentStep === 5 && telaahData.dapatDidampingi === 'ya') ? 'var(--color-primary-shadow)' : 'var(--color-text-muted)'}`, background: (currentStep === 2 || currentStep === 4) ? '#fff9e6' : (currentStep === 5 && telaahData.dapatDidampingi === 'ya') ? '#eef7ff' : '#f5f5f5' }}>
-            <h3 style={{ fontSize: '1rem', color: 'var(--color-text-muted)', marginBottom: '0.5rem' }}>Status Saat Ini</h3>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ margin: 0, color: currentStep === 6 ? 'var(--color-success)' : (currentStep === 2 || currentStep === 4) ? 'var(--color-warning-shadow)' : (currentStep === 5 && telaahData.dapatDidampingi === 'ya') ? 'var(--color-primary-shadow)' : 'var(--color-text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Clock size={24} /> {currentStep === 2 ? 'Menunggu SP-1' : currentStep === 3 ? 'Menunggu Telaah Hukum S-5' : currentStep === 4 ? 'Menunggu Surat Perintah Pendampingan (SP-2)' : (currentStep === 5 && telaahData.dapatDidampingi === 'ya') ? 'Dalam Proses Pendampingan' : currentStep === 6 ? 'Pendampingan Selesai' : 'Selesai'}
-              </h2>
-              {currentStep === 5 && (
-                 <button className="btn btn-outline" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }} onClick={handleSelesai}>
-                   <CheckCircle size={16} /> Tandai Selesai
-                 </button>
-              )}
-            </div>
-            {(currentStep === 2 || currentStep === 4) && <p style={{ fontSize: '0.9rem', marginTop: '0.5rem', fontWeight: 600 }}>Tenggat waktu: 2 hari lagi</p>}
-          </div>
+          {(() => {
+            // Tentukan warna & label berdasarkan currentStep
+            let borderColor, bgColor, textColor, statusLabel, showSelesaiBtn = false;
+
+            if (currentStep === 1) {
+              borderColor = 'var(--color-secondary-shadow)';
+              bgColor     = '#ddf4ff';
+              textColor   = 'var(--color-secondary-shadow)';
+              statusLabel = '📥 Permohonan Diterima';
+            } else if (currentStep === 2) {
+              borderColor = 'var(--color-warning-shadow)';
+              bgColor     = '#fff9e6';
+              textColor   = 'var(--color-warning-shadow)';
+              statusLabel = '⏳ Menunggu SP-1';
+            } else if (currentStep === 3) {
+              borderColor = '#b84d00';
+              bgColor     = '#fff0e5';
+              textColor   = '#b84d00';
+              statusLabel = '⏳ Menunggu Telaah Hukum S-5';
+            } else if (currentStep === 4) {
+              borderColor = 'var(--color-warning-shadow)';
+              bgColor     = '#fff9e6';
+              textColor   = 'var(--color-warning-shadow)';
+              statusLabel = '⏳ Menunggu Surat Perintah Pendampingan (SP-2)';
+            } else if (currentStep === 5 && telaahData.dapatDidampingi === 'ya') {
+              borderColor = 'var(--color-primary-shadow)';
+              bgColor     = '#e5f9d6';
+              textColor   = 'var(--color-primary-shadow)';
+              statusLabel = '🔄 Dalam Proses Pendampingan';
+              showSelesaiBtn = true;
+            } else if (currentStep === 5 && telaahData.dapatDidampingi === 'tidak') {
+              borderColor = 'var(--color-danger-shadow)';
+              bgColor     = '#fff0f0';
+              textColor   = 'var(--color-danger-shadow)';
+              statusLabel = '🗂️ Tidak Dapat Didampingi (Arsip)';
+            } else if (currentStep === 6) {
+              borderColor = 'var(--color-primary-shadow)';
+              bgColor     = '#e5f9d6';
+              textColor   = 'var(--color-primary-shadow)';
+              statusLabel = '✅ Pendampingan Selesai';
+            } else {
+              // fallback step 5 tanpa telaah
+              borderColor = 'var(--color-primary-shadow)';
+              bgColor     = '#e5f9d6';
+              textColor   = 'var(--color-primary-shadow)';
+              statusLabel = '🔄 Dalam Proses Pendampingan';
+              showSelesaiBtn = true;
+            }
+
+            return (
+              <div className="card" style={{ border: `2px solid ${borderColor}`, background: bgColor }}>
+                <h3 style={{ fontSize: '1rem', color: 'var(--color-text-muted)', marginBottom: '0.5rem' }}>Status Saat Ini</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h2 style={{ margin: 0, color: textColor, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.2rem' }}>
+                    <Clock size={22} />
+                    {statusLabel}
+                  </h2>
+                  {showSelesaiBtn && (
+                    <button className="btn btn-outline" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }} onClick={handleSelesai}>
+                      <CheckCircle size={16} /> Tandai Selesai
+                    </button>
+                  )}
+                </div>
+                {(currentStep === 2 || currentStep === 4) && (
+                  <p style={{ fontSize: '0.9rem', marginTop: '0.5rem', fontWeight: 600 }}>Tenggat waktu: 2 hari lagi</p>
+                )}
+              </div>
+            );
+          })()}
 
           <div className="card" style={{ padding: '1.5rem' }}>
             <h2 style={{ fontSize: '1.2rem', marginBottom: '1.5rem' }}>Tahapan Proses</h2>
