@@ -950,7 +950,16 @@ Riwayat Hambatan Historis:
                             <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>{rep.tanggal || rep.date}</div>
                           </td>
                           <td>
-                            <div style={{ fontWeight: 700 }}>{rep.progressKegiatan || '-'} ({rep.persentaseKegiatan || '0%'})</div>
+                            {!isAset ? (
+                              <div style={{ fontWeight: 700 }}>{rep.progressKegiatan || '-'} ({rep.persentaseKegiatan || '0%'})</div>
+                            ) : (
+                              <>
+                                <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Nominal Dipulihkan:</div>
+                                <div style={{ fontWeight: 700, color: '#27ae60' }}>
+                                  {rep.nilaiDipulihkan ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(rep.nilaiDipulihkan) : '-'}
+                                </div>
+                              </>
+                            )}
                           </td>
                           <td>
                             <div style={{ fontSize: '0.9rem', color: '#c0392b' }}>

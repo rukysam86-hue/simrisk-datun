@@ -29,6 +29,7 @@ function PemohonPortal() {
   // Aset specific fields
   const [permasalahan, setPermasalahan] = useState('');
   const [jenisAset, setJenisAset] = useState(['']);
+  const [nilaiDipulihkan, setNilaiDipulihkan] = useState('');
 
   const isAset = projectData?.suratData?.kategoriPermohonan === 'Pendampingan Pemulihan/Penyelamatan Aset';
 
@@ -115,7 +116,8 @@ function PemohonPortal() {
         persentaseKegiatan: `${persentaseKegiatan}%`,
         hambatan: hambatan,
         keterangan: keterangan,
-        linkDokumen: linkDokumen
+        linkDokumen: linkDokumen,
+        ...(isAset ? { nilaiDipulihkan: parseInt(nilaiDipulihkan.replace(/\./g, ''), 10) || 0 } : {})
       };
       
       const updatedMonitoring = {
@@ -151,6 +153,7 @@ function PemohonPortal() {
     setHambatan('');
     setKeterangan('');
     setLinkDokumen('');
+    setNilaiDipulihkan('');
   };
 
   if (!isUnlocked || !projectData) {
@@ -253,16 +256,27 @@ function PemohonPortal() {
         )}
 
         {(!hasInitialData && isAset) ? null : (
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
-            <div>
-              <label className="form-label" style={{ fontWeight: 600 }}>Progress Kegiatan</label>
-              <input type="text" className="form-input" placeholder="Contoh: Tahap Konstruksi Pondasi" value={progressKegiatan} onChange={e => setProgressKegiatan(e.target.value)} required />
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+              <div>
+                <label className="form-label" style={{ fontWeight: 600 }}>Progress Kegiatan</label>
+                <input type="text" className="form-input" placeholder="Contoh: Tahap Konstruksi Pondasi" value={progressKegiatan} onChange={e => setProgressKegiatan(e.target.value)} required />
+              </div>
+              <div>
+                <label className="form-label" style={{ fontWeight: 600 }}>Persentase (%)</label>
+                <input type="number" className="form-input" placeholder="0 - 100" value={persentaseKegiatan} onChange={e => setPersentaseKegiatan(e.target.value)} required />
+              </div>
             </div>
-            <div>
-              <label className="form-label" style={{ fontWeight: 600 }}>Persentase (%)</label>
-              <input type="number" className="form-input" placeholder="0 - 100" value={persentaseKegiatan} onChange={e => setPersentaseKegiatan(e.target.value)} required />
-            </div>
-          </div>
+            {(hasInitialData && isAset) && (
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label className="form-label" style={{ fontWeight: 600 }}>Nominal Aset Berhasil Dipulihkan</label>
+                <div style={{ display: 'flex', alignItems: 'center', background: 'white', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '0 0.5rem' }}>
+                  <span style={{ fontWeight: 700, paddingRight: '0.5rem', color: 'var(--color-text-muted)' }}>Rp</span>
+                  <input type="text" style={{ flex: 1, padding: '0.75rem 0', border: 'none', outline: 'none', background: 'transparent' }} placeholder="Contoh: 5.000.000.000" value={nilaiDipulihkan} onChange={e => setNilaiDipulihkan(formatRupiah(e.target.value))} required />
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         <div className="form-group" style={{ marginBottom: '1.5rem' }}>
