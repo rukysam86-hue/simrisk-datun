@@ -35,6 +35,8 @@ function DetailPermohonan() {
   const [formKegiatan, setFormKegiatan] = useState('');
   const [formNilai, setFormNilai] = useState('');
   const [formKasusPosisi, setFormKasusPosisi] = useState('');
+  const [formPermasalahan, setFormPermasalahan] = useState('');
+  const [formJenisAset, setFormJenisAset] = useState(['']);
   const [formProgres, setFormProgres] = useState('');
   const [formPersentase, setFormPersentase] = useState('');
   const [formHambatan, setFormHambatan] = useState('');
@@ -147,6 +149,20 @@ function DetailPermohonan() {
     return url;
   };
 
+  const isAset = suratData?.kategoriPermohonan === 'Pendampingan Pemulihan/Penyelamatan Aset';
+
+  const handleAddAsetAdmin = () => setFormJenisAset([...formJenisAset, '']);
+  const handleRemoveAsetAdmin = (idx) => {
+    const baru = [...formJenisAset];
+    baru.splice(idx, 1);
+    setFormJenisAset(baru);
+  };
+  const handleAsetChangeAdmin = (idx, val) => {
+    const baru = [...formJenisAset];
+    baru[idx] = val;
+    setFormJenisAset(baru);
+  };
+
   const formatRupiah = (value) => {
     const numberString = (value || '').toString().replace(/[^,\d]/g, '');
     const split = numberString.split(',');
@@ -179,7 +195,8 @@ function DetailPermohonan() {
         progressKegiatan: formProgres,
         persentaseKegiatan: `${formPersentase}%`,
         hambatan: formHambatan,
-        keterangan: formKeterangan
+        keterangan: formKeterangan,
+        ...(isAset ? { permasalahan: formPermasalahan, jenisAset: formJenisAset.filter(a => a.trim() !== '') } : {})
       },
       reports: []
     };
@@ -704,30 +721,56 @@ Riwayat Hambatan Historis:
                     <button type="button" className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.85rem' }} onClick={() => setIsAddingInitialData(false)}>Batal</button>
                   </div>
                   <div className="form-group" style={{ marginBottom: '1rem' }}>
-                    <label className="form-label" style={{ fontWeight: 600 }}>Kegiatan Yang Didampingi</label>
-                    <input className="form-input" required value={formKegiatan} onChange={e => setFormKegiatan(e.target.value)} placeholder="Contoh: Pembangunan SMA Unggul Garuda..." />
-                  </div>
-                  <div className="form-group" style={{ marginBottom: '1rem' }}>
-                    <label className="form-label" style={{ fontWeight: 600 }}>Nilai Anggaran</label>
+                    <label className="form-label" style={{ fontWeight: 600 }}>{isAset ? 'Nilai Total Aset' : 'Nilai Anggaran'}</label>
                     <div style={{ display: 'flex', alignItems: 'center', background: 'white', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '0 0.5rem' }}>
                       <span style={{ fontWeight: 700, paddingRight: '0.5rem', color: 'var(--color-text-muted)' }}>Rp</span>
                       <input type="text" style={{ flex: 1, padding: '0.6rem 0', border: 'none', outline: 'none', background: 'transparent' }} placeholder="Contoh: 15.000.000.000" value={formNilai} onChange={e => setFormNilai(formatRupiah(e.target.value))} required />
                     </div>
                   </div>
+                  {!isAset && (
+                    <div className="form-group" style={{ marginBottom: '1rem' }}>
+                      <label className="form-label" style={{ fontWeight: 600 }}>Kegiatan Yang Didampingi</label>
+                      <input className="form-input" required value={formKegiatan} onChange={e => setFormKegiatan(e.target.value)} placeholder="Contoh: Pembangunan SMA Unggul Garuda..." />
+                    </div>
+                  )}
                   <div className="form-group" style={{ marginBottom: '1rem' }}>
                     <label className="form-label" style={{ fontWeight: 600 }}>Kasus Posisi</label>
                     <textarea className="form-input" rows="3" required value={formKasusPosisi} onChange={e => setFormKasusPosisi(e.target.value)} placeholder="Uraian singkat posisi kasus/kegiatan..." />
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                    <div>
-                      <label className="form-label" style={{ fontWeight: 600 }}>Progress Kegiatan</label>
-                      <input className="form-input" required value={formProgres} onChange={e => setFormProgres(e.target.value)} placeholder="Contoh: Tahap Pengadaan / Konstruksi Awal" />
+                  {isAset && (
+                    <>
+                      <div className="form-group" style={{ marginBottom: '1rem' }}>
+                        <label className="form-label" style={{ fontWeight: 600 }}>Permasalahan</label>
+                        <textarea className="form-input" rows="3" required value={formPermasalahan} onChange={e => setFormPermasalahan(e.target.value)} placeholder="Uraian singkat permasalahan..." />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: '1rem' }}>
+                        <label className="form-label" style={{ fontWeight: 600 }}>Jenis Aset (Daftar)</label>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          {formJenisAset.map((aset, idx) => (
+                            <div key={idx} style={{ display: 'flex', gap: '0.5rem' }}>
+                              <input className="form-input" style={{ flex: 1 }} required value={aset} onChange={e => handleAsetChangeAdmin(idx, e.target.value)} placeholder={`Aset ${idx + 1}`} />
+                              {formJenisAset.length > 1 && (
+                                <button type="button" className="btn btn-outline" style={{ padding: '0.5rem' }} onClick={() => handleRemoveAsetAdmin(idx)}><X size={16} /></button>
+                              )}
+                            </div>
+                          ))}
+                          <button type="button" className="btn btn-outline" style={{ alignSelf: 'flex-start', padding: '0.4rem 0.8rem', fontSize: '0.85rem' }} onClick={handleAddAsetAdmin}><Plus size={14} style={{ marginRight: '0.3rem' }} /> Tambah Aset</button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  {!isAset && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                      <div>
+                        <label className="form-label" style={{ fontWeight: 600 }}>Progress Kegiatan</label>
+                        <input className="form-input" required value={formProgres} onChange={e => setFormProgres(e.target.value)} placeholder="Contoh: Tahap Pengadaan / Konstruksi Awal" />
+                      </div>
+                      <div>
+                        <label className="form-label" style={{ fontWeight: 600 }}>Persentase (%)</label>
+                        <input type="number" className="form-input" required value={formPersentase} onChange={e => setFormPersentase(e.target.value)} placeholder="0 - 100" />
+                      </div>
                     </div>
-                    <div>
-                      <label className="form-label" style={{ fontWeight: 600 }}>Persentase (%)</label>
-                      <input type="number" className="form-input" required value={formPersentase} onChange={e => setFormPersentase(e.target.value)} placeholder="0 - 100" />
-                    </div>
-                  </div>
+                  )}
                   <div className="form-group" style={{ marginBottom: '1rem' }}>
                     <label className="form-label" style={{ fontWeight: 600 }}>Hambatan / Kendala</label>
                     <textarea className="form-input" rows="2" value={formHambatan} onChange={e => setFormHambatan(e.target.value)} placeholder="Tuliskan hambatan atau kendala yang dihadapi di lapangan..." />
@@ -753,26 +796,30 @@ Riwayat Hambatan Historis:
                   </span>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+                  {!isAset && (
+                    <div>
+                      <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Kegiatan</span>
+                      <div style={{ fontWeight: 700 }}>{monitoringData.kegiatan || '-'}</div>
+                    </div>
+                  )}
                   <div>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Kegiatan</span>
-                    <div style={{ fontWeight: 700 }}>{monitoringData.kegiatan || '-'}</div>
-                  </div>
-                  <div>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Nilai Anggaran</span>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>{isAset ? 'Nilai Total Aset' : 'Nilai Anggaran'}</span>
                     <div style={{ fontWeight: 700 }}>
                       {monitoringData.nilai ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(monitoringData.nilai) : '-'}
                     </div>
                   </div>
-                  <div>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Progres Kegiatan (Terbaru)</span>
-                    <div style={{ fontWeight: 700 }}>
-                      {(() => {
-                        const hasReports = monitoringData.reports && monitoringData.reports.length > 0;
-                        const latest = hasReports ? monitoringData.reports[monitoringData.reports.length - 1] : monitoringData.initialData;
-                        return `${latest?.progressKegiatan || monitoringData.progressKegiatan || '-'} (${latest?.persentaseKegiatan || monitoringData.persentaseKegiatan || '0%'})`;
-                      })()}
+                  {!isAset && (
+                    <div>
+                      <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Progres Kegiatan (Terbaru)</span>
+                      <div style={{ fontWeight: 700 }}>
+                        {(() => {
+                          const hasReports = monitoringData.reports && monitoringData.reports.length > 0;
+                          const latest = hasReports ? monitoringData.reports[monitoringData.reports.length - 1] : monitoringData.initialData;
+                          return `${latest?.progressKegiatan || monitoringData.progressKegiatan || '-'} (${latest?.persentaseKegiatan || monitoringData.persentaseKegiatan || '0%'})`;
+                        })()}
+                      </div>
                     </div>
-                  </div>
+                  )}
                   <div>
                     <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Terakhir Update</span>
                     <div style={{ fontWeight: 700 }}>{monitoringData.lastUpdate || '-'}</div>
@@ -783,6 +830,24 @@ Riwayat Hambatan Historis:
                   <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Kasus Posisi</span>
                   <div style={{ background: 'var(--color-surface)', padding: '0.75rem', borderRadius: '4px', fontSize: '0.9rem' }}>{monitoringData.kasusPosisi || '-'}</div>
                 </div>
+
+                {isAset && monitoringData.initialData?.permasalahan && (
+                  <div style={{ marginBottom: '1rem' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Permasalahan</span>
+                    <div style={{ background: 'var(--color-surface)', padding: '0.75rem', borderRadius: '4px', fontSize: '0.9rem' }}>{monitoringData.initialData.permasalahan}</div>
+                  </div>
+                )}
+
+                {isAset && monitoringData.initialData?.jenisAset && monitoringData.initialData.jenisAset.length > 0 && (
+                  <div style={{ marginBottom: '1rem' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Jenis Aset</span>
+                    <ul style={{ margin: 0, paddingLeft: '1.25rem', background: 'var(--color-surface)', padding: '0.75rem 0.75rem 0.75rem 2rem', borderRadius: '4px', fontSize: '0.9rem' }}>
+                      {monitoringData.initialData.jenisAset.map((aset, i) => (
+                        <li key={i} style={{ marginBottom: '0.25rem' }}>{aset}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 
                 <div>
                   <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Hambatan / Kendala Awal</span>

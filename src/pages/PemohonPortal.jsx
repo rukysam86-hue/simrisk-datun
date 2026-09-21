@@ -26,6 +26,24 @@ function PemohonPortal() {
   const [keterangan, setKeterangan] = useState('');
   const [linkDokumen, setLinkDokumen] = useState('');
 
+  // Aset specific fields
+  const [permasalahan, setPermasalahan] = useState('');
+  const [jenisAset, setJenisAset] = useState(['']);
+
+  const isAset = projectData?.suratData?.kategoriPermohonan === 'Pendampingan Pemulihan/Penyelamatan Aset';
+
+  const handleAddAset = () => setJenisAset([...jenisAset, '']);
+  const handleRemoveAset = (index) => {
+    const newAset = [...jenisAset];
+    newAset.splice(index, 1);
+    setJenisAset(newAset);
+  };
+  const handleAsetChange = (index, value) => {
+    const newAset = [...jenisAset];
+    newAset[index] = value;
+    setJenisAset(newAset);
+  };
+
   const formatRupiah = (value) => {
     const numberString = value.replace(/[^,\d]/g, '').toString();
     const split = numberString.split(',');
@@ -81,7 +99,8 @@ function PemohonPortal() {
             persentaseKegiatan: `${persentaseKegiatan}%`,
             hambatan: hambatan,
             keterangan: keterangan,
-            linkDokumen: linkDokumen
+            linkDokumen: linkDokumen,
+            ...(isAset ? { permasalahan, jenisAset: jenisAset.filter(a => a.trim() !== '') } : {})
           },
           reports: []
         }
@@ -185,12 +204,15 @@ function PemohonPortal() {
       <form onSubmit={handleSubmit}>
         {!hasInitialData && (
           <>
+            {!isAset ? (
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label className="form-label" style={{ fontWeight: 600 }}>Kegiatan Yang Dampingi</label>
+                <input type="text" className="form-input" placeholder="Contoh: Pembangunan SMA Unggul Garuda..." value={kegiatan} onChange={e => setKegiatan(e.target.value)} required />
+              </div>
+            ) : null}
+
             <div style={{ marginBottom: '1.5rem' }}>
-              <label className="form-label" style={{ fontWeight: 600 }}>Kegiatan Yang Dampingi</label>
-              <input type="text" className="form-input" placeholder="Contoh: Pembangunan SMA Unggul Garuda..." value={kegiatan} onChange={e => setKegiatan(e.target.value)} required />
-            </div>
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label className="form-label" style={{ fontWeight: 600 }}>Nilai Anggaran</label>
+              <label className="form-label" style={{ fontWeight: 600 }}>{isAset ? 'Nilai Total Aset' : 'Nilai Anggaran'}</label>
               <div style={{ display: 'flex', alignItems: 'center', background: 'white', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '0 0.5rem' }}>
                 <span style={{ fontWeight: 700, paddingRight: '0.5rem', color: 'var(--color-text-muted)' }}>Rp</span>
                 <input type="text" style={{ flex: 1, padding: '0.75rem 0', border: 'none', outline: 'none', background: 'transparent' }} placeholder="Contoh: 15.000.000.000" value={nilaiAnggaran} onChange={e => setNilaiAnggaran(formatRupiah(e.target.value))} required />
@@ -200,19 +222,48 @@ function PemohonPortal() {
               <label className="form-label" style={{ fontWeight: 600 }}>Kasus Posisi</label>
               <textarea className="form-input" rows="3" placeholder="Uraian singkat posisi kasus/kegiatan..." value={kasusPosisi} onChange={e => setKasusPosisi(e.target.value)} required></textarea>
             </div>
+
+            {isAset && (
+              <>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label className="form-label" style={{ fontWeight: 600 }}>Permasalahan</label>
+                  <textarea className="form-input" rows="3" placeholder="Uraian singkat permasalahan..." value={permasalahan} onChange={e => setPermasalahan(e.target.value)} required></textarea>
+                </div>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label className="form-label" style={{ fontWeight: 600 }}>Jenis Aset (Daftar)</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {jenisAset.map((aset, idx) => (
+                      <div key={idx} style={{ display: 'flex', gap: '0.5rem' }}>
+                        <input type="text" className="form-input" style={{ flex: 1 }} placeholder={`Aset ${idx + 1} (contoh: Tanah 1000m2)`} value={aset} onChange={e => handleAsetChange(idx, e.target.value)} required />
+                        {jenisAset.length > 1 && (
+                          <button type="button" className="btn btn-outline" style={{ padding: '0.75rem' }} onClick={() => handleRemoveAset(idx)}>
+                            <X size={16} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button type="button" className="btn btn-outline" style={{ alignSelf: 'flex-start', padding: '0.5rem 1rem', fontSize: '0.9rem' }} onClick={handleAddAset}>
+                      <Plus size={16} style={{ marginRight: '0.5rem' }} /> Tambah Aset
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
-          <div>
-            <label className="form-label" style={{ fontWeight: 600 }}>Progress Kegiatan</label>
-            <input type="text" className="form-input" placeholder="Contoh: Tahap Konstruksi Pondasi" value={progressKegiatan} onChange={e => setProgressKegiatan(e.target.value)} required />
+        {(!hasInitialData && isAset) ? null : (
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+            <div>
+              <label className="form-label" style={{ fontWeight: 600 }}>Progress Kegiatan</label>
+              <input type="text" className="form-input" placeholder="Contoh: Tahap Konstruksi Pondasi" value={progressKegiatan} onChange={e => setProgressKegiatan(e.target.value)} required />
+            </div>
+            <div>
+              <label className="form-label" style={{ fontWeight: 600 }}>Persentase (%)</label>
+              <input type="number" className="form-input" placeholder="0 - 100" value={persentaseKegiatan} onChange={e => setPersentaseKegiatan(e.target.value)} required />
+            </div>
           </div>
-          <div>
-            <label className="form-label" style={{ fontWeight: 600 }}>Persentase (%)</label>
-            <input type="number" className="form-input" placeholder="0 - 100" value={persentaseKegiatan} onChange={e => setPersentaseKegiatan(e.target.value)} required />
-          </div>
-        </div>
+        )}
 
         <div className="form-group" style={{ marginBottom: '1.5rem' }}>
           <label className="form-label" style={{ fontWeight: 600 }}>Hambatan / Kendala</label>
