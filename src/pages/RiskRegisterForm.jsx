@@ -11,7 +11,8 @@ function PermohonanForm() {
     tanggalSurat: '',
     perihal: '',
     isiSurat: '',
-    linkSurat: ''
+    linkSurat: '',
+    kategoriPermohonan: 'Pendampingan Hukum Proyek Infrastruktur'
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -31,7 +32,8 @@ function PermohonanForm() {
         tanggalSurat: formData.tanggalSurat,
         perihal: formData.perihal,
         isiSurat: formData.isiSurat,
-        pdfUrl: formData.linkSurat
+        pdfUrl: formData.linkSurat,
+        kategoriPermohonan: formData.kategoriPermohonan
       },
       sp1Data: { timJpn: [] },
       telaahData: {},
@@ -62,6 +64,36 @@ function PermohonanForm() {
           <Mail size={24} />
           Data Surat Permohonan
         </h2>
+
+        <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+          <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, marginBottom: '0.75rem' }}>
+            <FileText size={16} /> Kategori Permohonan
+          </label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+              <input 
+                type="radio" 
+                name="kategoriPermohonan" 
+                value="Pendampingan Pemulihan/Penyelamatan Aset" 
+                checked={formData.kategoriPermohonan === 'Pendampingan Pemulihan/Penyelamatan Aset'}
+                onChange={e => setFormData({...formData, kategoriPermohonan: e.target.value})}
+                style={{ width: '1.2rem', height: '1.2rem', accentColor: 'var(--color-primary-shadow)' }}
+              />
+              <span style={{ fontSize: '0.95rem', color: 'var(--color-text-main)' }}>Pendampingan Pemulihan/Penyelamatan Aset</span>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+              <input 
+                type="radio" 
+                name="kategoriPermohonan" 
+                value="Pendampingan Hukum Proyek Infrastruktur" 
+                checked={formData.kategoriPermohonan === 'Pendampingan Hukum Proyek Infrastruktur'}
+                onChange={e => setFormData({...formData, kategoriPermohonan: e.target.value})}
+                style={{ width: '1.2rem', height: '1.2rem', accentColor: 'var(--color-primary-shadow)' }}
+              />
+              <span style={{ fontSize: '0.95rem', color: 'var(--color-text-main)' }}>Pendampingan Hukum Proyek Infrastruktur</span>
+            </label>
+          </div>
+        </div>
         
         <div className="form-group">
           <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

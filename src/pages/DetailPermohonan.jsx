@@ -511,7 +511,10 @@ Riwayat Hambatan Historis:
                   <h3 style={{ fontSize: '1.1rem', color: 'var(--color-text-muted)', margin: '0 0 0.5rem 0' }}>{suratData.asalSurat}</h3>
                   <p style={{ fontWeight: 800, fontSize: '1.1rem', margin: '0 0 0.5rem 0' }}>{suratData.perihal}</p>
                   <p style={{ color: 'var(--color-text-main)', fontSize: '0.9rem', margin: '0 0 0.25rem 0' }}>Nomor Surat: {suratData.nomorSurat}</p>
-                  <p style={{ color: 'var(--color-text-main)', fontSize: '0.9rem', margin: '0 0 1rem 0' }}>Tanggal Surat: {suratData.tanggalSurat}</p>
+                  <p style={{ color: 'var(--color-text-main)', fontSize: '0.9rem', margin: '0 0 0.25rem 0' }}>Tanggal Surat: {suratData.tanggalSurat}</p>
+                  <p style={{ color: 'var(--color-text-main)', fontSize: '0.9rem', margin: '0 0 1rem 0' }}>
+                    Kategori: <span style={{ fontWeight: 700, color: 'var(--color-primary-shadow)' }}>{suratData.kategoriPermohonan || 'Pendampingan Hukum Proyek Infrastruktur'}</span>
+                  </p>
                   
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <button className="btn btn-outline" style={{ padding: '0.5rem', fontSize: '0.85rem' }} onClick={() => setIsEditing(true)}>
@@ -1211,6 +1214,17 @@ Riwayat Hambatan Historis:
                   onChange={(e) => setSuratData({ ...suratData, asalSurat: e.target.value })}
                   placeholder="Contoh: PT Nindya Karya"
                 />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>Kategori Permohonan</label>
+                <select 
+                  className="form-input"
+                  value={suratData.kategoriPermohonan || 'Pendampingan Hukum Proyek Infrastruktur'}
+                  onChange={(e) => setSuratData({ ...suratData, kategoriPermohonan: e.target.value })}
+                >
+                  <option value="Pendampingan Pemulihan/Penyelamatan Aset">Pendampingan Pemulihan/Penyelamatan Aset</option>
+                  <option value="Pendampingan Hukum Proyek Infrastruktur">Pendampingan Hukum Proyek Infrastruktur</option>
+                </select>
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>Perihal</label>
