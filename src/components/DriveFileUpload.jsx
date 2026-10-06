@@ -8,6 +8,10 @@ export default function DriveFileUpload({
   multiple = false,
   permohonanId = '',
   permohonanTitle = '',
+  subfolderName = '',
+  asalSurat = '',
+  tanggalSurat = '',
+  parentFolderName = 'SIM RISK',
   label = 'Dokumen (Google Drive)',
   folderCategory = 'general',
   accept = '.pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg',
@@ -43,7 +47,11 @@ export default function DriveFileUpload({
       const res = await uploadFileToDrive(file, {
         folderCategory,
         permohonanId,
-        permohonanTitle
+        permohonanTitle,
+        subfolderName,
+        asalSurat,
+        tanggalSurat,
+        parentFolderName
       }, (prog) => {
         setUploadStatus(prog.message);
       });
@@ -77,7 +85,11 @@ export default function DriveFileUpload({
       const res = await uploadMultipleFilesToDrive(files, {
         folderCategory,
         permohonanId,
-        permohonanTitle
+        permohonanTitle,
+        subfolderName,
+        asalSurat,
+        tanggalSurat,
+        parentFolderName
       }, (prog) => {
         setUploadStatus(prog.message);
       });
@@ -163,9 +175,9 @@ export default function DriveFileUpload({
             <UploadCloud size={16} color="var(--color-primary-shadow)" />
             {label} {required && <span style={{ color: 'var(--color-danger)' }}>*</span>}
           </label>
-          {permohonanId && (
-            <span style={{ fontSize: '0.72rem', background: '#e0f2fe', color: '#0369a1', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
-              Folder #{permohonanId}
+          {(subfolderName || permohonanId) && (
+            <span style={{ fontSize: '0.72rem', background: '#e0f2fe', color: '#0369a1', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }} title="Folder Target di Google Drive">
+              📁 {subfolderName || `#${permohonanId}`}
             </span>
           )}
         </div>

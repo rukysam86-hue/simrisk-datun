@@ -46,6 +46,24 @@ export const uploadFileToDrive = async (file, options = {}, onProgress = () => {
   const folderCategory = opts.folderCategory || 'general';
   const permohonanId = opts.permohonanId || 'PERMOHONAN_UMUM';
   const permohonanTitle = opts.permohonanTitle || '';
+  const asalSurat = opts.asalSurat || '';
+  const tanggalSurat = opts.tanggalSurat || '';
+  const parentFolderName = opts.parentFolderName || 'SIM RISK';
+
+  // Tentukan nama subfolder: [Nama Pemohon] - [Tanggal Surat]
+  let subfolderName = opts.subfolderName || '';
+  if (!subfolderName) {
+    if (asalSurat && tanggalSurat) {
+      subfolderName = `${asalSurat} - ${tanggalSurat}`;
+    } else if (asalSurat) {
+      subfolderName = asalSurat;
+    } else if (permohonanTitle) {
+      subfolderName = `${permohonanId ? permohonanId + ' - ' : ''}${permohonanTitle}`;
+    } else {
+      subfolderName = permohonanId || 'PERMOHONAN';
+    }
+  }
+  subfolderName = subfolderName.replace(/[/\\?%*:|"<>]/g, '-').trim();
 
   // Batas ukuran file 20MB untuk kestabilan Google Apps Script
   const MAX_SIZE_MB = 20;
@@ -67,14 +85,14 @@ export const uploadFileToDrive = async (file, options = {}, onProgress = () => {
       fileId: dummyId,
       fileUrl: `https://drive.google.com/file/d/1demo-${encodeURIComponent(file.name.replace(/\s+/g, '_'))}/preview`,
       viewUrl: `https://drive.google.com/file/d/1demo-${encodeURIComponent(file.name.replace(/\s+/g, '_'))}/view`,
-      folderUrl: `https://drive.google.com/drive/folders/demo-folder-${encodeURIComponent(permohonanId)}`,
+      folderUrl: `https://drive.google.com/drive/folders/demo-folder-${encodeURIComponent(subfolderName)}`,
       fileName: file.name,
-      folderName: `${permohonanId} - ${permohonanTitle || 'Kegiatan'}`,
+      folderName: subfolderName,
       isDemo: true
     };
   }
 
-  onProgress({ stage: 'uploading', message: `Mengunggah "${file.name}" ke folder [${permohonanId}] di Google Drive...` });
+  onProgress({ stage: 'uploading', message: `Mengunggah "${file.name}" ke folder [${subfolderName}] di Google Drive (${parentFolderName})...` });
 
   const payload = {
     fileName: file.name,
@@ -82,7 +100,11 @@ export const uploadFileToDrive = async (file, options = {}, onProgress = () => {
     fileData: base64DataUrl,
     folderCategory: folderCategory,
     permohonanId: permohonanId,
-    permohonanTitle: permohonanTitle
+    permohonanTitle: permohonanTitle,
+    asalSurat: asalSurat,
+    tanggalSurat: tanggalSurat,
+    subfolderName: subfolderName,
+    parentFolderName: parentFolderName
   };
 
   try {

@@ -580,6 +580,12 @@ function PemohonPortal() {
           }}
           permohonanId={linkId}
           permohonanTitle={kegiatan || projectData?.monitoring?.kegiatan || projectData?.suratData?.perihal || linkId}
+          subfolderName={(projectData?.suratData?.asalSurat && projectData?.suratData?.tanggalSurat)
+            ? `${projectData.suratData.asalSurat.trim()} - ${projectData.suratData.tanggalSurat.trim()}`
+            : (projectData?.suratData?.asalSurat || linkId)}
+          asalSurat={projectData?.suratData?.asalSurat || ''}
+          tanggalSurat={projectData?.suratData?.tanggalSurat || ''}
+          parentFolderName="SIM RISK"
           folderCategory="laporan"
           helpText="Pilih satu atau banyak berkas (Kurva S, Foto Lapangan, Berita Acara, dsb.)"
         />

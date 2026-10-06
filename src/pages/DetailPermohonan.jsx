@@ -104,6 +104,10 @@ function DetailPermohonan() {
     setMasterJpnList(getMasterJpnList());
   }, []);
 
+  const targetSubfolderName = (suratData?.asalSurat && suratData?.tanggalSurat)
+    ? `${suratData.asalSurat.trim()} - ${suratData.tanggalSurat.trim()}`
+    : (suratData?.asalSurat ? suratData.asalSurat.trim() : id);
+
   const tambahJpn = () => setSp1Data({ ...sp1Data, timJpn: [...(sp1Data.timJpn || []), { nama: '', nip: '', jabatan: '' }] });
   const hapusJpn = (idx) => setSp1Data({ ...sp1Data, timJpn: (sp1Data.timJpn || []).filter((_, i) => i !== idx) });
   const updateJpn = (idx, field, val) => {
@@ -1521,6 +1525,10 @@ ${isAset ? `- Nominal Aset Pulih Laporan Ini: Rp ${formatRupiah(report.nilaiDipu
                       }}
                       permohonanId={id}
                       permohonanTitle={monitoringData?.kegiatan || suratData?.perihal || id}
+                      subfolderName={targetSubfolderName}
+                      asalSurat={suratData?.asalSurat || ''}
+                      tanggalSurat={suratData?.tanggalSurat || ''}
+                      parentFolderName="SIM RISK"
                       folderCategory="saran"
                       helpText="Unggah berkas Word (.docx) atau PDF surat saran untuk pemohon"
                     />
@@ -1725,6 +1733,10 @@ ${isAset ? `- Nominal Aset Pulih Laporan Ini: Rp ${formatRupiah(report.nilaiDipu
                   }}
                   permohonanId={id}
                   permohonanTitle={monitoringData?.kegiatan || suratData?.perihal || id}
+                  subfolderName={targetSubfolderName}
+                  asalSurat={suratData?.asalSurat || ''}
+                  tanggalSurat={suratData?.tanggalSurat || ''}
+                  parentFolderName="SIM RISK"
                   folderCategory="saran"
                   helpText="Unggah berkas Word (.docx) atau PDF surat saran untuk pemohon"
                 />
@@ -1912,6 +1924,10 @@ ${isAset ? `- Nominal Aset Pulih Laporan Ini: Rp ${formatRupiah(report.nilaiDipu
                 }}
                 permohonanId={id}
                 permohonanTitle={monitoringData?.kegiatan || suratData?.perihal || id}
+                subfolderName={targetSubfolderName}
+                asalSurat={suratData?.asalSurat || ''}
+                tanggalSurat={suratData?.tanggalSurat || ''}
+                parentFolderName="SIM RISK"
                 folderCategory="sp1"
                 helpText="Unggah scan dokumen SP-1 resmi (.pdf)"
               />
@@ -1997,6 +2013,10 @@ ${isAset ? `- Nominal Aset Pulih Laporan Ini: Rp ${formatRupiah(report.nilaiDipu
                 }}
                 permohonanId={id}
                 permohonanTitle={monitoringData?.kegiatan || suratData?.perihal || id}
+                subfolderName={targetSubfolderName}
+                asalSurat={suratData?.asalSurat || ''}
+                tanggalSurat={suratData?.tanggalSurat || ''}
+                parentFolderName="SIM RISK"
                 folderCategory="telaahan"
                 helpText="Unggah berkas telaahan yuridis (.pdf atau .docx)"
               />
@@ -2131,6 +2151,10 @@ ${isAset ? `- Nominal Aset Pulih Laporan Ini: Rp ${formatRupiah(report.nilaiDipu
                 }}
                 permohonanId={id}
                 permohonanTitle={monitoringData?.kegiatan || suratData?.perihal || id}
+                subfolderName={targetSubfolderName}
+                asalSurat={suratData?.asalSurat || ''}
+                tanggalSurat={suratData?.tanggalSurat || ''}
+                parentFolderName="SIM RISK"
                 folderCategory="sp2"
                 helpText="Unggah scan dokumen SP-2 resmi (.pdf)"
               />
