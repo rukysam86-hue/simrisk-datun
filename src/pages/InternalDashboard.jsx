@@ -155,8 +155,13 @@ function PermohonanTable({ data, onDelete }) {
     );
   }, [data, search]);
 
-  // Reset ke halaman 1 saat pencarian berubah
+  // Reset ke halaman 1 saat pencarian berubah atau sesuaikan jika melebihi totalPages
   useEffect(() => { setCurrentPage(1); }, [search]);
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const paginated  = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -410,6 +415,11 @@ function KegiatanTable({ data, onDelete }) {
   }, [data, search]);
 
   useEffect(() => { setCurrentPage(1); }, [search]);
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const paginated  = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -659,14 +669,23 @@ function InternalDashboard() {
 
   const handleDelete = async (id) => {
     if (window.confirm('Yakin ingin menghapus data permohonan ini secara permanen?')) {
-      // Optimistic update: langsung hilangkan seketika dari tabel di layar
-      setPermohonanList(prev => prev.filter(p => p.id !== id));
+      const cleanId = String(id).trim();
+
+      // 1. Optimistic update: langsung hilangkan seketika dari tabel di layar tanpa delay
+      setPermohonanList(prev => prev.filter(p => String(p.id).trim() !== cleanId));
+
       try {
-        await deletePermohonan(id);
+        // 2. Hapus dari localStorage & Supabase di background
+        await deletePermohonan(cleanId);
       } catch (err) {
         console.error('Gagal menghapus permohonan:', err);
+        // Rollback jika terjadi error
+        await loadData();
       }
-      await loadData();
+      // CATATAN: JANGAN panggil loadData() di sini saat sukses!
+      // Memanggil loadData() langsung setelah delete dapat memicu race condition
+      // di mana server Supabase / query mengembalikan data lama sebelum commit selesai,
+      // sehingga item yang sudah dihapus sempat muncul kembali.
     }
   };
 

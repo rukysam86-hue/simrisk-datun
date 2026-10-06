@@ -175,7 +175,8 @@ const DELETED_IDS_KEY = 'simrisk_datun_deleted_ids';
 export const getDeletedIds = () => {
   try {
     const raw = localStorage.getItem(DELETED_IDS_KEY);
-    return new Set(raw ? JSON.parse(raw) : []);
+    const arr = raw ? JSON.parse(raw) : [];
+    return new Set(arr.map(x => String(x).trim()));
   } catch (e) {
     return new Set();
   }
@@ -184,7 +185,7 @@ export const getDeletedIds = () => {
 export const addDeletedId = (id) => {
   try {
     const set = getDeletedIds();
-    set.add(id);
+    set.add(String(id).trim());
     localStorage.setItem(DELETED_IDS_KEY, JSON.stringify(Array.from(set)));
   } catch (e) {}
 };
@@ -192,7 +193,7 @@ export const addDeletedId = (id) => {
 export const removeDeletedId = (id) => {
   try {
     const set = getDeletedIds();
-    set.delete(id);
+    set.delete(String(id).trim());
     localStorage.setItem(DELETED_IDS_KEY, JSON.stringify(Array.from(set)));
   } catch (e) {}
 };
@@ -222,7 +223,7 @@ const saveLocalStore = (data) => {
 
 export const getAllPermohonan = async () => {
   const deletedIds = getDeletedIds();
-  const localData = getLocalStore().filter(item => !deletedIds.has(item.id));
+  const localData = getLocalStore().filter(item => !deletedIds.has(String(item.id).trim()));
 
   if (isSupabaseConfigured) {
     try {
@@ -233,12 +234,12 @@ export const getAllPermohonan = async () => {
         .order('currentStep', { ascending: true });
 
       if (!response.error && response.data) {
-        // Filter out data yang sudah ditandai dihapus oleh pengguna
-        const activeSupabaseData = response.data.filter(item => !deletedIds.has(item.id));
+        // Filter out data yang sudah ditandai dihapus oleh pengguna (string matching aman)
+        const activeSupabaseData = response.data.filter(item => !deletedIds.has(String(item.id).trim()));
 
         // Gabungkan data Supabase dengan data lokal yang baru dibuat
-        const supabaseIds = new Set(activeSupabaseData.map(item => item.id));
-        const unsyncedLocal = localData.filter(item => !supabaseIds.has(item.id));
+        const supabaseIds = new Set(activeSupabaseData.map(item => String(item.id).trim()));
+        const unsyncedLocal = localData.filter(item => !supabaseIds.has(String(item.id).trim()));
 
         // Gabungan data: data lokal terbaru di paling atas
         const merged = [...unsyncedLocal, ...activeSupabaseData];
@@ -379,12 +380,14 @@ export const updatePermohonan = async (id, updatedData) => {
 };
 
 export const deletePermohonan = async (id) => {
+  const cleanId = String(id).trim();
+
   // 1. Masukkan ke blacklist ID terhapus (mencegah data muncul kembali saat merge)
-  addDeletedId(id);
+  addDeletedId(cleanId);
 
   // 2. Hapus langsung dari localStorage
   const store = getLocalStore();
-  const updatedStore = store.filter(item => item.id !== id);
+  const updatedStore = store.filter(item => String(item.id).trim() !== cleanId);
   saveLocalStore(updatedStore);
 
   // 3. Hapus dari database cloud Supabase jika aktif
@@ -393,14 +396,14 @@ export const deletePermohonan = async (id) => {
       const response = await supabase
         .from('permohonan')
         .delete()
-        .eq('id', id);
+        .eq('id', cleanId);
       if (response.error) {
-        console.warn(`[Supabase] Catatan delete cloud (${id}):`, response.error);
+        console.warn(`[Supabase] Catatan delete cloud (${cleanId}):`, response.error);
       } else {
-        console.log(`[Supabase] Data ID ${id} berhasil dihapus dari cloud.`);
+        console.log(`[Supabase] Data ID ${cleanId} berhasil dihapus dari cloud.`);
       }
     } catch (err) {
-      console.warn(`[Supabase] Exception saat delete ${id}:`, err);
+      console.warn(`[Supabase] Exception saat delete ${cleanId}:`, err);
     }
   }
 
