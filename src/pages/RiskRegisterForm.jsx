@@ -145,11 +145,14 @@ function PermohonanForm() {
         driveFolderUrl: finalDriveFolderUrl,
         suratData: {
           asalSurat: formData.asalSurat.trim(),
+          namaPemohon: formData.asalSurat.trim(),
           nomorSurat: formData.nomorSurat.trim(),
           tanggalSurat: formData.tanggalSurat.trim(),
           perihal: formData.perihal.trim(),
           isiSurat: formData.isiSurat.trim(),
           pdfUrl: finalPdfUrl,
+          linkSurat: finalPdfUrl,
+          pin: permohonanId,
           kategoriPermohonan: formData.kategoriPermohonan,
           driveFolderUrl: finalDriveFolderUrl
         },

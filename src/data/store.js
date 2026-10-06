@@ -194,6 +194,8 @@ const saveLocalStore = (data) => {
 };
 
 export const getAllPermohonan = async () => {
+  const localData = getLocalStore();
+
   if (isSupabaseConfigured) {
     try {
       console.log('[Supabase] Mengambil semua data permohonan...');
@@ -201,14 +203,25 @@ export const getAllPermohonan = async () => {
         .from('permohonan')
         .select('*')
         .order('currentStep', { ascending: true });
-      if (!response.error && response.data && response.data.length > 0) {
-        return response.data;
+
+      if (!response.error && response.data) {
+        // Gabungkan data Supabase dengan data lokal yang baru dibuat
+        const supabaseIds = new Set(response.data.map(item => item.id));
+        const unsyncedLocal = localData.filter(item => !supabaseIds.has(item.id));
+
+        // Gabungan data: data lokal terbaru di paling atas
+        const merged = [...unsyncedLocal, ...response.data];
+        saveLocalStore(merged);
+        return merged;
+      } else if (response.error) {
+        console.warn('[Supabase Error on select, fallback to localStorage]:', response.error);
       }
     } catch (err) {
       console.warn('[Supabase] Gagal mengambil data, menggunakan fallback localStorage:', err);
     }
   }
-  return getLocalStore();
+
+  return localData;
 };
 
 export const getPermohonanById = async (id) => {
@@ -232,35 +245,94 @@ export const getPermohonanById = async (id) => {
 };
 
 export const addPermohonan = async (newPermohonan) => {
+  // 1. Selalu simpan ke localStorage terlebih dahulu agar data tidak hilang
+  const store = getLocalStore();
+  const existingIdx = store.findIndex(item => item.id === newPermohonan.id);
+  let updatedStore;
+  if (existingIdx !== -1) {
+    store[existingIdx] = newPermohonan;
+    updatedStore = store;
+  } else {
+    updatedStore = [newPermohonan, ...store];
+  }
+  saveLocalStore(updatedStore);
+
+  // 2. Jika Supabase aktif, simpan ke database cloud Supabase
   if (isSupabaseConfigured) {
     try {
-      const response = await supabase
+      const payload = {
+        id: newPermohonan.id,
+        currentStep: newPermohonan.currentStep || 1,
+        suratData: newPermohonan.suratData || {},
+        sp1Data: newPermohonan.sp1Data || { timJpn: [] },
+        telaahData: newPermohonan.telaahData || {},
+        sp2Data: newPermohonan.sp2Data || { timJpn: [] },
+        monitoring: newPermohonan.monitoring || null
+      };
+      if (newPermohonan.driveFolderUrl) {
+        payload.driveFolderUrl = newPermohonan.driveFolderUrl;
+      }
+
+      let response = await supabase
         .from('permohonan')
-        .insert([newPermohonan])
+        .insert([payload])
         .select()
         .single();
+
+      // Fallback jika kolom driveFolderUrl belum dibuat di skema Supabase
+      if (response.error && (response.error.message?.includes('driveFolderUrl') || response.error.code === 'PGRST204')) {
+        console.warn('[Supabase] Mencoba insert ulang tanpa kolom driveFolderUrl...');
+        delete payload.driveFolderUrl;
+        response = await supabase
+          .from('permohonan')
+          .insert([payload])
+          .select()
+          .single();
+      }
+
       if (!response.error && response.data) {
+        console.log('[Supabase] Data berhasil disimpan ke Supabase:', response.data);
         return response.data;
+      } else if (response.error) {
+        console.error('[Supabase Insert Error]:', response.error);
       }
     } catch (err) {
-      console.warn('[Supabase] Gagal add, menyimpan ke localStorage:', err);
+      console.warn('[Supabase] Exception saat addPermohonan:', err);
     }
   }
-  const store = getLocalStore();
-  const updated = [newPermohonan, ...store];
-  saveLocalStore(updated);
+
   return newPermohonan;
 };
 
 export const updatePermohonan = async (id, updatedData) => {
+  // Update local storage
+  const store = getLocalStore();
+  const index = store.findIndex(item => item.id === id);
+  if (index !== -1) {
+    store[index] = { ...store[index], ...updatedData };
+    saveLocalStore(store);
+  }
+
   if (isSupabaseConfigured) {
     try {
-      const response = await supabase
+      const payload = { ...updatedData };
+      let response = await supabase
         .from('permohonan')
-        .update(updatedData)
+        .update(payload)
         .eq('id', id)
         .select()
         .single();
+
+      if (response.error && (response.error.message?.includes('driveFolderUrl') || response.error.code === 'PGRST204')) {
+        delete payload.driveFolderUrl;
+        response = await supabase
+          .from('permohonan')
+          .update(payload)
+          .eq('id', id)
+          .select()
+          .single();
+      }
+
       if (!response.error && response.data) {
         return response.data;
       }
@@ -268,14 +340,8 @@ export const updatePermohonan = async (id, updatedData) => {
       console.warn(`[Supabase] Gagal update ${id}, update ke localStorage:`, err);
     }
   }
-  const store = getLocalStore();
-  const index = store.findIndex(item => item.id === id);
-  if (index !== -1) {
-    store[index] = { ...store[index], ...updatedData };
-    saveLocalStore(store);
-    return store[index];
-  }
-  return null;
+
+  return index !== -1 ? store[index] : null;
 };
 
 export const deletePermohonan = async (id) => {

@@ -149,9 +149,9 @@ function PermohonanTable({ data, onDelete }) {
     if (!search.trim()) return data;
     const q = search.toLowerCase();
     return data.filter(p =>
-      p.suratData?.asalSurat?.toLowerCase().includes(q)  ||
-      p.suratData?.perihal?.toLowerCase().includes(q)    ||
-      p.suratData?.nomorSurat?.toLowerCase().includes(q)
+      (p.suratData?.asalSurat || p.suratData?.namaPemohon || '').toLowerCase().includes(q) ||
+      (p.suratData?.perihal || '').toLowerCase().includes(q) ||
+      (p.suratData?.nomorSurat || '').toLowerCase().includes(q)
     );
   }, [data, search]);
 
@@ -272,7 +272,7 @@ function PermohonanTable({ data, onDelete }) {
                   {/* Instansi */}
                   <td>
                     <div style={{ fontWeight: 800, fontSize: '0.85rem', color: '#1a2332' }}>
-                      {act.suratData?.asalSurat || '-'}
+                      {act.suratData?.asalSurat || act.suratData?.namaPemohon || '-'}
                     </div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 700, marginTop: '2px' }}>
                       {act.suratData?.tanggalSurat
