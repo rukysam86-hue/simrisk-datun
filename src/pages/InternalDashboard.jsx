@@ -155,6 +155,9 @@ function PermohonanTable({ data, onDelete }) {
     );
   }, [data, search]);
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paginated  = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   // Reset ke halaman 1 saat pencarian berubah atau sesuaikan jika melebihi totalPages
   useEffect(() => { setCurrentPage(1); }, [search]);
   useEffect(() => {
@@ -162,9 +165,6 @@ function PermohonanTable({ data, onDelete }) {
       setCurrentPage(totalPages);
     }
   }, [totalPages, currentPage]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const paginated  = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: '2rem', border: '2px solid var(--color-secondary-shadow)' }}>
@@ -414,15 +414,15 @@ function KegiatanTable({ data, onDelete }) {
     );
   }, [data, search]);
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paginated  = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   useEffect(() => { setCurrentPage(1); }, [search]);
   useEffect(() => {
     if (currentPage > totalPages) {
       setCurrentPage(totalPages);
     }
   }, [totalPages, currentPage]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const paginated  = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
