@@ -49,6 +49,7 @@ export const uploadFileToDrive = async (file, options = {}, onProgress = () => {
   const asalSurat = opts.asalSurat || '';
   const tanggalSurat = opts.tanggalSurat || '';
   const parentFolderName = opts.parentFolderName || 'SIM RISK';
+  const parentFolderId = opts.parentFolderId || import.meta.env.VITE_GOOGLE_DRIVE_PARENT_FOLDER_ID || '1xpIMIPoRw8jS062W0NpXgi4d6RHLDW49';
 
   // Tentukan nama subfolder: [Nama Pemohon] - [Tanggal Surat]
   let subfolderName = opts.subfolderName || '';
@@ -104,7 +105,8 @@ export const uploadFileToDrive = async (file, options = {}, onProgress = () => {
     asalSurat: asalSurat,
     tanggalSurat: tanggalSurat,
     subfolderName: subfolderName,
-    parentFolderName: parentFolderName
+    parentFolderName: parentFolderName,
+    parentFolderId: parentFolderId
   };
 
   try {

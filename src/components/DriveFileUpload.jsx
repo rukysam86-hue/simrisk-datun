@@ -12,6 +12,7 @@ export default function DriveFileUpload({
   asalSurat = '',
   tanggalSurat = '',
   parentFolderName = 'SIM RISK',
+  parentFolderId = '1xpIMIPoRw8jS062W0NpXgi4d6RHLDW49',
   label = 'Dokumen (Google Drive)',
   folderCategory = 'general',
   accept = '.pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg',
@@ -51,7 +52,8 @@ export default function DriveFileUpload({
         subfolderName,
         asalSurat,
         tanggalSurat,
-        parentFolderName
+        parentFolderName,
+        parentFolderId
       }, (prog) => {
         setUploadStatus(prog.message);
       });
@@ -89,7 +91,8 @@ export default function DriveFileUpload({
         subfolderName,
         asalSurat,
         tanggalSurat,
-        parentFolderName
+        parentFolderName,
+        parentFolderId
       }, (prog) => {
         setUploadStatus(prog.message);
       });

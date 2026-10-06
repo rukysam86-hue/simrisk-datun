@@ -127,7 +127,8 @@ function PermohonanForm() {
           asalSurat: formData.asalSurat.trim(),
           tanggalSurat: formData.tanggalSurat.trim(),
           subfolderName: cleanSubfolderName,
-          parentFolderName: 'SIM RISK'
+          parentFolderName: 'SIM RISK',
+          parentFolderId: '1xpIMIPoRw8jS062W0NpXgi4d6RHLDW49'
         }, (prog) => {
           setSubmitProgressText(prog.message);
         });

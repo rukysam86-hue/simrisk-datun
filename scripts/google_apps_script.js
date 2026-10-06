@@ -2,40 +2,42 @@
  * GOOGLE APPS SCRIPT - SIMRISK DATUN DRIVE UPLOADER (PER-PERMOHONAN FOLDER)
  * =========================================================================
  * Script ini mengelompokkan seluruh dokumen administrasi ke dalam 1 FOLDER KHUSUS
- * untuk setiap kegiatan pendampingan / permohonan.
+ * untuk setiap kegiatan pendampingan / permohonan di dalam folder induk "SIM RISK".
  * 
  * STRUKTUR FOLDER DI GOOGLE DRIVE:
- * 📁 SIM RISK (Folder Induk Utama yang sudah ada di Drive Anda)
+ * 📁 SIM RISK (Folder Induk ID: 1xpIMIPoRw8jS062W0NpXgi4d6RHLDW49)
  *    └── 📁 [Nama Pemohon] - [Tanggal Surat]  <-- 1 SUBFOLDER PER KEGIATAN
  *           ├── 📁 01_Surat_Permohonan        <-- Scan Surat Permohonan resmi
  *           ├── 📁 02_Administrasi_JPN        <-- SP-1, Telaahan Hukum S-5, SP-2
  *           ├── 📁 03_Laporan_Progres_Pemohon <-- Multi-file (Kurva S, Foto, BA)
  *           └── 📁 04_Saran_Tindakan_JPN      <-- Lembar saran & mitigasi JPN
  * 
- * PANDUAN UPDATE DI GOOGLE APPS SCRIPT:
- * 1. Buka https://script.google.com -> Proyek "SIMRISK DATUN API"
- * 2. Ganti seluruh isi kode di Apps Script dengan kode di file ini.
- * 3. Klik tombol Simpan (ikon disket).
- * 4. Klik tombol "Deploy" (Terapkan) -> "Manage deployments" (Kelola penerapan).
- * 5. Klik ikon Pensil (Edit) -> Pilih Versi: "New version" (Versi baru).
- * 6. Klik "Deploy" (Terapkan).
+ * PANDUAN PENTING UPDATE DI GOOGLE APPS SCRIPT:
+ * 1. Buka https://script.google.com -> Buka proyek "SIMRISK DATUN API"
+ * 2. Hapus seluruh kode lama di editor, lalu PASTE SELURUH KODE DARI FILE INI.
+ * 3. Klik tombol Simpan (ikon disket atau Ctrl + S).
+ * 4. PENTING: Klik tombol "Deploy" (Terapkan) di pojok kanan atas -> pilih "Manage deployments" (Kelola penerapan).
+ * 5. Klik ikon Pensil (Edit) di sebelah kanan baris deployment aktif.
+ * 6. Pada dropdown "Version", PILIH "New version" (Versi baru).
+ * 7. Klik "Deploy" (Terapkan).
+ * (CATATAN: Jika tidak memilih "New version", Google Apps Script akan terus menjalankan versi lama!)
  */
 
-// OPSIONAL: Jika ingin mengunci ke ID folder tertentu, isi di sini.
-// Jika dikosongkan (""), script akan OTOMATIS mendeteksi folder "SIM RISK" atau "SIMRISK_DATUN_DOKUMEN" di Google Drive Anda!
-var TARGET_FOLDER_ID = "";
+// KUNCI KE ID FOLDER "SIM RISK" ANDA:
+var TARGET_FOLDER_ID = "1xpIMIPoRw8jS062W0NpXgi4d6RHLDW49";
 
 /**
  * Handle HTTP GET (Pengecekan status API & Folder Induk)
  */
 function doGet(e) {
-  var rootFolder = getAppRootFolder();
+  var rootFolder = getAppRootFolder("SIM RISK", TARGET_FOLDER_ID);
   var folderStatus = rootFolder ? ("Folder Induk Aktif: " + rootFolder.getName() + " (ID: " + rootFolder.getId() + ")") : "Folder Belum Ditemukan";
 
   return ContentService.createTextOutput(JSON.stringify({
     status: "ok",
     message: "Google Drive Upload API SIMRISK DATUN aktif.",
     parentFolder: rootFolder ? rootFolder.getName() : "None",
+    parentFolderId: rootFolder ? rootFolder.getId() : "None",
     folderInfo: folderStatus,
     timestamp: new Date().toISOString()
   })).setMimeType(ContentService.MimeType.JSON);
@@ -63,6 +65,7 @@ function doPost(e) {
     var permohonanId = requestData.permohonanId || "";
     var permohonanTitle = requestData.permohonanTitle || "";
     var customParentName = requestData.parentFolderName || "SIM RISK";
+    var customParentId = requestData.parentFolderId || TARGET_FOLDER_ID;
 
     if (!rawFileData) {
       throw new Error("Data file kosong.");
@@ -77,10 +80,10 @@ function doPost(e) {
     var decodedBytes = Utilities.base64Decode(base64Content);
     var blob = Utilities.newBlob(decodedBytes, mimeType, fileName);
 
-    // 1. Dapatkan Folder Induk Utama (Memprioritaskan folder "SIM RISK" yang sudah dibuat di Drive)
-    var rootFolder = getAppRootFolder(customParentName);
+    // 1. Dapatkan Folder Induk Utama "SIM RISK" (Menggunakan ID: 1xpIMIPoRw8jS062W0NpXgi4d6RHLDW49)
+    var rootFolder = getAppRootFolder(customParentName, customParentId);
 
-    // 2. Tentukan Nama Subfolder Sesuai Permintaan: [Nama Pemohon] - [Tanggal Surat]
+    // 2. Tentukan Nama Subfolder: [Nama Pemohon] - [Tanggal Surat]
     var targetSubfolderName = "";
     if (subfolderName && subfolderName.trim()) {
       targetSubfolderName = subfolderName.trim();
@@ -96,7 +99,7 @@ function doPost(e) {
       targetSubfolderName = "Permohonan_" + Utilities.formatDate(new Date(), "GMT+8", "yyyyMMdd");
     }
 
-    // Bersihkan karakter yang dilarang pada sistem nama file / folder
+    // Bersihkan karakter yang dilarang pada sistem nama folder
     targetSubfolderName = targetSubfolderName.replace(/[/\\?%*:|"<>]/g, '-').trim();
 
     // 3. Buat atau Temukan Subfolder Kegiatan di dalam Folder Induk "SIM RISK" (BUKAN DI ROOT DRIVE)
@@ -135,6 +138,7 @@ function doPost(e) {
       parentFolderUrl: parentFolderUrl,
       folderName: targetSubfolderName,
       parentFolderName: rootFolder.getName(),
+      parentFolderId: rootFolder.getId(),
       category: categoryFolderName
     };
 
@@ -152,24 +156,27 @@ function doPost(e) {
 
 /**
  * Mendapatkan Folder Induk Utama di Google Drive
- * 1. Menggunakan TARGET_FOLDER_ID jika diset spesifik
- * 2. Mencari folder "SIM RISK" atau "SIMRISK_DATUN_DOKUMEN" yang sudah dibuat oleh user di Drive
+ * 1. Menggunakan TARGET_FOLDER_ID (1xpIMIPoRw8jS062W0NpXgi4d6RHLDW49)
+ * 2. Fallback mencari folder bernama "SIM RISK" di Drive
  * 3. Jika belum ada, otomatis membuat folder baru bernama "SIM RISK"
  */
-function getAppRootFolder(customParentName) {
-  // 1. Cek TARGET_FOLDER_ID eksplisit jika diisi
-  if (TARGET_FOLDER_ID && TARGET_FOLDER_ID !== "PASTE_GOOGLE_DRIVE_FOLDER_ID_DISINI" && TARGET_FOLDER_ID.trim() !== "") {
+function getAppRootFolder(customParentName, customParentId) {
+  var folderId = customParentId || TARGET_FOLDER_ID;
+
+  // 1. Cek TARGET_FOLDER_ID eksplisit
+  if (folderId && folderId.trim() !== "" && folderId !== "PASTE_GOOGLE_DRIVE_FOLDER_ID_DISINI") {
     try {
-      var folderById = DriveApp.getFolderById(TARGET_FOLDER_ID.trim());
+      var folderById = DriveApp.getFolderById(folderId.trim());
       if (folderById && !folderById.isTrashed()) {
+        Logger.log("Folder induk ditemukan via ID: " + folderById.getName() + " (" + folderById.getId() + ")");
         return folderById;
       }
     } catch (err) {
-      Logger.log("TARGET_FOLDER_ID tidak valid: " + err.toString());
+      Logger.log("DriveApp.getFolderById error: " + err.toString());
     }
   }
 
-  // 2. Daftar nama folder induk kandidat yang dicari di Google Drive pengguna
+  // 2. Daftar nama folder induk kandidat jika akses ID gagal
   var searchList = [];
   if (customParentName && customParentName.trim()) {
     searchList.push(customParentName.trim());
@@ -177,20 +184,19 @@ function getAppRootFolder(customParentName) {
   searchList.push("SIM RISK");
   searchList.push("SIMRISK_DATUN_DOKUMEN");
   searchList.push("SIMRISK DATUN");
-  searchList.push("SIMRISK");
 
   for (var i = 0; i < searchList.length; i++) {
     var folders = DriveApp.getFoldersByName(searchList[i]);
     while (folders.hasNext()) {
       var f = folders.next();
       if (!f.isTrashed()) {
-        Logger.log("Folder induk ditemukan: " + f.getName() + " (ID: " + f.getId() + ")");
+        Logger.log("Folder induk ditemukan via Nama: " + f.getName() + " (ID: " + f.getId() + ")");
         return f;
       }
     }
   }
 
-  // 3. Jika belum ditemukan, buat folder baru "SIM RISK" di Root Google Drive
+  // 3. Jika belum ditemukan sama sekali, buat folder baru "SIM RISK" di Root
   Logger.log("Folder induk belum ditemukan, membuat folder baru: SIM RISK");
   var newRoot = DriveApp.createFolder("SIM RISK");
   try {
