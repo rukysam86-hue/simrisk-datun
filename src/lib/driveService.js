@@ -6,7 +6,7 @@
  * dengan pengelompokan 1 folder per kegiatan permohonan pendampingan.
  */
 
-const SCRIPT_URL = import.meta.env.VITE_GOOGLE_DRIVE_UPLOAD_URL || 'https://script.google.com/macros/s/AKfycbxdM80Y4En1-BVhslBjVags9n329GpFjL1lMpBj55kbHRgzD3slG3v2M-RgFnNya6ETww/exec';
+const SCRIPT_URL = import.meta.env.VITE_GOOGLE_DRIVE_UPLOAD_URL || 'https://script.google.com/macros/s/AKfycbzyeVmLnS7m2HAJ_hURIq_zqvrdNl5rrHujNhyBsStZZ2k1JzBedmCTnNgW2GRDQKhR9g/exec';
 
 /**
  * Mengecek apakah Google Drive Upload API sudah dikonfigurasi
