@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, FileText, Key, Settings as SettingsIcon, LogOut, ShieldCheck } from 'lucide-react';
+import { Home, FileText, Key, Settings as SettingsIcon, LogOut, ShieldCheck, Users } from 'lucide-react';
 import './index.css';
 
 // Auth
@@ -13,6 +13,7 @@ import PemohonPortal from './pages/PemohonPortal';
 import DetailPermohonan from './pages/DetailPermohonan';
 import Settings from './pages/Settings';
 import LoginPage from './pages/LoginPage';
+import DaftarJpnPage from './pages/DaftarJpnPage';
 
 function Sidebar() {
   const location = useLocation();
@@ -72,6 +73,12 @@ function Sidebar() {
             </Link>
           </li>
           <li>
+            <Link to="/jpn" className={`nav-item ${isActive('/jpn') ? 'active' : ''}`}>
+              <Users size={20} />
+              Daftar JPN
+            </Link>
+          </li>
+          <li>
             <Link to="/settings" className={`nav-item ${isActive('/settings') ? 'active' : ''}`}>
               <SettingsIcon size={20} />
               Pengaturan AI
@@ -118,6 +125,7 @@ function InternalLayout() {
           <Route path="/" element={<InternalDashboard />} />
           <Route path="/register" element={<RiskRegisterForm />} />
           <Route path="/permohonan/:id" element={<DetailPermohonan />} />
+          <Route path="/jpn" element={<DaftarJpnPage />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </div>

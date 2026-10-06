@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, Clock, FileText, ShieldAlert, Download, Edit3, Save, X, Trash2, Activity, Sparkles, Plus, ExternalLink, Copy, FileDown, DollarSign, CreditCard, TrendingUp, Wallet, CheckCircle2, AlertTriangle, Folder } from 'lucide-react';
-import { getPermohonanById, updatePermohonan, deletePermohonan } from '../data/store';
+import { ArrowLeft, CheckCircle, Clock, FileText, ShieldAlert, Download, Edit3, Save, X, Trash2, Activity, Sparkles, Plus, ExternalLink, Copy, FileDown, DollarSign, CreditCard, TrendingUp, Wallet, CheckCircle2, AlertTriangle, Folder, Users } from 'lucide-react';
+import { getPermohonanById, updatePermohonan, deletePermohonan, getMasterJpnList } from '../data/store';
 import ReactMarkdown from 'react-markdown';
 import { downloadAnalysisAsDocx } from '../lib/docxGenerator';
 import DriveFileUpload from '../components/DriveFileUpload';
@@ -98,6 +98,12 @@ function DetailPermohonan() {
     setPdfTitleToView(title);
     setIsViewingPdf(true);
   };
+  const [masterJpnList, setMasterJpnList] = useState([]);
+
+  useEffect(() => {
+    setMasterJpnList(getMasterJpnList());
+  }, []);
+
   const tambahJpn = () => setSp1Data({ ...sp1Data, timJpn: [...(sp1Data.timJpn || []), { nama: '', nip: '', jabatan: '' }] });
   const hapusJpn = (idx) => setSp1Data({ ...sp1Data, timJpn: (sp1Data.timJpn || []).filter((_, i) => i !== idx) });
   const updateJpn = (idx, field, val) => {
@@ -106,11 +112,67 @@ function DetailPermohonan() {
     setSp1Data({ ...sp1Data, timJpn: baru });
   };
 
-  const tambahJpnSp2 = () => setSp2Data({ ...sp2Data, timJpn: [...sp2Data.timJpn, { nama: '', nip: '', jabatan: '' }] });
-  const hapusJpnSp2 = (idx) => setSp2Data({ ...sp2Data, timJpn: sp2Data.timJpn.filter((_, i) => i !== idx) });
+  const handleAutoFillAllJpnSp1 = () => {
+    const list = getMasterJpnList();
+    const mapped = list.map(j => ({
+      nama: j.nama,
+      nip: j.nip,
+      jabatan: j.jabatan || 'Jaksa Pengacara Negara'
+    }));
+    setSp1Data({ ...sp1Data, timJpn: mapped });
+  };
+
+  const handleSelectMasterJpnForSp1 = (index, jpnId) => {
+    if (!jpnId) return;
+    const selected = masterJpnList.find(j => j.id === jpnId);
+    if (!selected) return;
+    const baru = [...(sp1Data.timJpn || [])];
+    baru[index] = {
+      ...baru[index],
+      nama: selected.nama,
+      nip: selected.nip,
+      jabatan: selected.jabatan
+    };
+    setSp1Data({ ...sp1Data, timJpn: baru });
+  };
+
+  const tambahJpnSp2 = () => setSp2Data({ ...sp2Data, timJpn: [...(sp2Data.timJpn || []), { nama: '', nip: '', jabatan: '' }] });
+  const hapusJpnSp2 = (idx) => setSp2Data({ ...sp2Data, timJpn: (sp2Data.timJpn || []).filter((_, i) => i !== idx) });
   const updateJpnSp2 = (idx, field, val) => {
-    const baru = [...sp2Data.timJpn];
+    const baru = [...(sp2Data.timJpn || [])];
     baru[idx][field] = val;
+    setSp2Data({ ...sp2Data, timJpn: baru });
+  };
+
+  const handleAutoFillAllJpnSp2 = () => {
+    const list = getMasterJpnList();
+    const mapped = list.map(j => ({
+      nama: j.nama,
+      nip: j.nip,
+      jabatan: j.jabatan || 'Jaksa Pengacara Negara'
+    }));
+    setSp2Data({ ...sp2Data, timJpn: mapped });
+  };
+
+  const handleCopyJpnFromSp1ToSp2 = () => {
+    if (!sp1Data.timJpn || sp1Data.timJpn.length === 0) {
+      alert('Tim JPN pada SP-1 belum diisi.');
+      return;
+    }
+    setSp2Data({ ...sp2Data, timJpn: [...sp1Data.timJpn] });
+  };
+
+  const handleSelectMasterJpnForSp2 = (index, jpnId) => {
+    if (!jpnId) return;
+    const selected = masterJpnList.find(j => j.id === jpnId);
+    if (!selected) return;
+    const baru = [...(sp2Data.timJpn || [])];
+    baru[index] = {
+      ...baru[index],
+      nama: selected.nama,
+      nip: selected.nip,
+      jabatan: selected.jabatan
+    };
     setSp2Data({ ...sp2Data, timJpn: baru });
   };
 
@@ -1783,16 +1845,60 @@ ${isAset ? `- Nominal Aset Pulih Laporan Ini: Rp ${formatRupiah(report.nilaiDipu
               </div>
               
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>Tim JPN (Kepada)</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <label style={{ margin: 0, fontWeight: 600, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <Users size={16} /> Tim JPN (Kepada)
+                  </label>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem', color: 'var(--color-primary-shadow)', borderColor: 'var(--color-primary-shadow)' }}
+                    onClick={handleAutoFillAllJpnSp1}
+                    title="Otomatis masukkan seluruh daftar JPN yang terdaftar"
+                  >
+                    ⚡ Input Otomatis Semua JPN ({masterJpnList.length})
+                  </button>
+                </div>
+
                 {(sp1Data.timJpn || []).map((jpn, index) => (
-                  <div key={index} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                    <input className="form-input" style={{ flex: 1, fontSize: '0.85rem', padding: '0.5rem' }} value={jpn.nama} onChange={e => updateJpn(index, 'nama', e.target.value)} placeholder="Nama JPN" />
-                    <input className="form-input" style={{ flex: 1, fontSize: '0.85rem', padding: '0.5rem' }} value={jpn.nip} onChange={e => updateJpn(index, 'nip', e.target.value)} placeholder="NIP" />
-                    <input className="form-input" style={{ flex: 1, fontSize: '0.85rem', padding: '0.5rem' }} value={jpn.jabatan} onChange={e => updateJpn(index, 'jabatan', e.target.value)} placeholder="Jabatan" />
-                    <button className="btn btn-outline" style={{ padding: '0.5rem 0.75rem' }} onClick={() => hapusJpn(index)}><X size={16} /></button>
+                  <div key={index} style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '0.75rem', padding: '0.6rem', background: 'var(--color-bg)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <select
+                        className="form-input"
+                        style={{ fontSize: '0.8rem', padding: '0.35rem 0.5rem', flex: 1, backgroundColor: 'var(--color-surface)' }}
+                        value={masterJpnList.find(m => m.nama === jpn.nama)?.id || ''}
+                        onChange={(e) => handleSelectMasterJpnForSp1(index, e.target.value)}
+                      >
+                        <option value="">-- Pilih dari Daftar JPN ({masterJpnList.length}) --</option>
+                        {masterJpnList.map(m => (
+                          <option key={m.id} value={m.id}>{m.nama} ({m.pangkat || 'JPN'})</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        style={{ padding: '0.35rem 0.6rem', color: 'var(--color-danger-shadow)', borderColor: 'var(--color-danger-shadow)' }}
+                        onClick={() => hapusJpn(index)}
+                        title="Hapus baris ini"
+                      >
+                        <X size={15} />
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <input className="form-input" style={{ flex: 1.5, fontSize: '0.82rem', padding: '0.4rem 0.6rem' }} value={jpn.nama} onChange={e => updateJpn(index, 'nama', e.target.value)} placeholder="Nama Lengkap & Gelar" />
+                      <input className="form-input" style={{ flex: 1, fontSize: '0.82rem', padding: '0.4rem 0.6rem' }} value={jpn.nip} onChange={e => updateJpn(index, 'nip', e.target.value)} placeholder="NIP" />
+                      <input className="form-input" style={{ flex: 1.2, fontSize: '0.82rem', padding: '0.4rem 0.6rem' }} value={jpn.jabatan} onChange={e => updateJpn(index, 'jabatan', e.target.value)} placeholder="Jabatan" />
+                    </div>
                   </div>
                 ))}
-                <button className="btn btn-outline" style={{ width: '100%', padding: '0.5rem', fontSize: '0.85rem', borderStyle: 'dashed' }} onClick={tambahJpn}>+ Tambah Anggota JPN</button>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  style={{ width: '100%', padding: '0.5rem', fontSize: '0.85rem', borderStyle: 'dashed' }}
+                  onClick={tambahJpn}
+                >
+                  + Tambah Anggota JPN
+                </button>
               </div>
 
               <DriveFileUpload
@@ -1945,16 +2051,73 @@ ${isAset ? `- Nominal Aset Pulih Laporan Ini: Rp ${formatRupiah(report.nilaiDipu
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>Tim Jaksa yang Diperintahkan</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <label style={{ margin: 0, fontWeight: 600, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <Users size={16} /> Tim Jaksa yang Diperintahkan
+                  </label>
+                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      className="btn btn-outline"
+                      style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem', color: 'var(--color-primary-shadow)', borderColor: 'var(--color-primary-shadow)' }}
+                      onClick={handleAutoFillAllJpnSp2}
+                      title="Otomatis masukkan seluruh daftar JPN yang terdaftar"
+                    >
+                      ⚡ Input Otomatis Semua JPN ({masterJpnList.length})
+                    </button>
+                    {sp1Data.timJpn && sp1Data.timJpn.length > 0 && (
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
+                        onClick={handleCopyJpnFromSp1ToSp2}
+                        title="Salin susunan tim dari SP-1"
+                      >
+                        📋 Salin dari SP-1 ({sp1Data.timJpn.length})
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 {(sp2Data.timJpn || []).map((jpn, index) => (
-                  <div key={index} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                    <input className="form-input" style={{ flex: 1, fontSize: '0.85rem', padding: '0.5rem' }} value={jpn.nama} onChange={e => updateJpnSp2(index, 'nama', e.target.value)} placeholder="Nama JPN" />
-                    <input className="form-input" style={{ flex: 1, fontSize: '0.85rem', padding: '0.5rem' }} value={jpn.nip} onChange={e => updateJpnSp2(index, 'nip', e.target.value)} placeholder="NIP" />
-                    <input className="form-input" style={{ flex: 1, fontSize: '0.85rem', padding: '0.5rem' }} value={jpn.jabatan} onChange={e => updateJpnSp2(index, 'jabatan', e.target.value)} placeholder="Jabatan" />
-                    <button className="btn btn-outline" style={{ padding: '0.5rem 0.75rem' }} onClick={() => hapusJpnSp2(index)}><X size={16} /></button>
+                  <div key={index} style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '0.75rem', padding: '0.6rem', background: 'var(--color-bg)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <select
+                        className="form-input"
+                        style={{ fontSize: '0.8rem', padding: '0.35rem 0.5rem', flex: 1, backgroundColor: 'var(--color-surface)' }}
+                        value={masterJpnList.find(m => m.nama === jpn.nama)?.id || ''}
+                        onChange={(e) => handleSelectMasterJpnForSp2(index, e.target.value)}
+                      >
+                        <option value="">-- Pilih dari Daftar JPN ({masterJpnList.length}) --</option>
+                        {masterJpnList.map(m => (
+                          <option key={m.id} value={m.id}>{m.nama} ({m.pangkat || 'JPN'})</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        style={{ padding: '0.35rem 0.6rem', color: 'var(--color-danger-shadow)', borderColor: 'var(--color-danger-shadow)' }}
+                        onClick={() => hapusJpnSp2(index)}
+                        title="Hapus baris ini"
+                      >
+                        <X size={15} />
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <input className="form-input" style={{ flex: 1.5, fontSize: '0.82rem', padding: '0.4rem 0.6rem' }} value={jpn.nama} onChange={e => updateJpnSp2(index, 'nama', e.target.value)} placeholder="Nama Lengkap & Gelar" />
+                      <input className="form-input" style={{ flex: 1, fontSize: '0.82rem', padding: '0.4rem 0.6rem' }} value={jpn.nip} onChange={e => updateJpnSp2(index, 'nip', e.target.value)} placeholder="NIP" />
+                      <input className="form-input" style={{ flex: 1.2, fontSize: '0.82rem', padding: '0.4rem 0.6rem' }} value={jpn.jabatan} onChange={e => updateJpnSp2(index, 'jabatan', e.target.value)} placeholder="Jabatan" />
+                    </div>
                   </div>
                 ))}
-                <button className="btn btn-outline" style={{ width: '100%', padding: '0.5rem', fontSize: '0.85rem', borderStyle: 'dashed' }} onClick={tambahJpnSp2}>+ Tambah Jaksa</button>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  style={{ width: '100%', padding: '0.5rem', fontSize: '0.85rem', borderStyle: 'dashed' }}
+                  onClick={tambahJpnSp2}
+                >
+                  + Tambah Jaksa
+                </button>
               </div>
 
               <DriveFileUpload

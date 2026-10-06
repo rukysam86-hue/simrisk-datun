@@ -304,3 +304,126 @@ export const generateId = () => {
   }
   return result;
 };
+
+// ==========================================
+// MASTER DATA JAKSA PENGACARA NEGARA (JPN)
+// Kejaksaan Tinggi Nusa Tenggara Timur
+// ==========================================
+export const JPN_STORAGE_KEY = 'simrisk_datun_master_jpn';
+
+export const INITIAL_JPN_LIST = [
+  {
+    id: 'jpn-1',
+    nama: 'Choirun Parapat, S.H., M.H.',
+    pangkat: 'Jaksa Utama Pratama',
+    nip: '197601152000121001',
+    nrp: '60176017',
+    jabatan: 'Jaksa Pengacara Negara pada Kantor Pengacara Negara di Kejaksaan Tinggi NTT'
+  },
+  {
+    id: 'jpn-2',
+    nama: 'Putu Agus Eka Sabana Putra, S.H., M.H.',
+    pangkat: 'Jaksa Madya',
+    nip: '197906192001121003',
+    nrp: '60279263',
+    jabatan: 'Jaksa Pengacara Negara pada Kantor Pengacara Negara di Kejaksaan Tinggi NTT'
+  },
+  {
+    id: 'jpn-3',
+    nama: 'Eirene Margaretha Oranay, S.H., M.H.',
+    pangkat: 'Jaksa Madya',
+    nip: '197906282006032001',
+    nrp: '60679360',
+    jabatan: 'Jaksa Pengacara Negara pada Kantor Pengacara Negara di Kejaksaan Tinggi NTT'
+  },
+  {
+    id: 'jpn-4',
+    nama: 'Sandra M. M Salamony, S.H., M.H.',
+    pangkat: 'Jaksa Madya',
+    nip: '1972021123001032001',
+    nrp: '69972173',
+    jabatan: 'Jaksa Pengacara Negara pada Kantor Pengacara Negara di Kejaksaan Tinggi NTT'
+  },
+  {
+    id: 'jpn-5',
+    nama: 'Ronald Oktha, S.H., M.H.',
+    pangkat: 'Jaksa Madya',
+    nip: '198310312008121002',
+    nrp: '60983966',
+    jabatan: 'Jaksa Pengacara Negara pada Kantor Pengacara Negara di Kejaksaan Tinggi NTT'
+  },
+  {
+    id: 'jpn-6',
+    nama: 'Gerson A. Saudila, SH.',
+    pangkat: 'Jaksa Utama Pratama',
+    nip: '197102071998031013',
+    nrp: '69871240',
+    jabatan: 'Jaksa Pengacara Negara pada Kantor Pengacara Negara di Kejaksaan Tinggi NTT'
+  },
+  {
+    id: 'jpn-7',
+    nama: 'Herry C. Franklin, S.H., M.H.',
+    pangkat: 'Jaksa Utama Pratama',
+    nip: '197512172001121002',
+    nrp: '60275283',
+    jabatan: 'Jaksa Pengacara Negara pada Kantor Pengacara Negara di Kejaksaan Tinggi NTT'
+  }
+];
+
+export const getMasterJpnList = () => {
+  try {
+    const raw = localStorage.getItem(JPN_STORAGE_KEY);
+    if (!raw) {
+      localStorage.setItem(JPN_STORAGE_KEY, JSON.stringify(INITIAL_JPN_LIST));
+      return INITIAL_JPN_LIST;
+    }
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : INITIAL_JPN_LIST;
+  } catch (e) {
+    return INITIAL_JPN_LIST;
+  }
+};
+
+export const saveMasterJpnList = (list) => {
+  try {
+    localStorage.setItem(JPN_STORAGE_KEY, JSON.stringify(list));
+  } catch (e) {
+    console.error('Gagal menyimpan master JPN:', e);
+  }
+  return list;
+};
+
+export const addMasterJpn = (jpn) => {
+  const current = getMasterJpnList();
+  const newItem = {
+    ...jpn,
+    id: jpn.id || `jpn-${Date.now()}`
+  };
+  const updated = [...current, newItem];
+  saveMasterJpnList(updated);
+  return newItem;
+};
+
+export const updateMasterJpn = (id, updatedFields) => {
+  const current = getMasterJpnList();
+  const index = current.findIndex(j => j.id === id);
+  if (index !== -1) {
+    current[index] = { ...current[index], ...updatedFields };
+    saveMasterJpnList(current);
+    return current[index];
+  }
+  return null;
+};
+
+export const deleteMasterJpn = (id) => {
+  const current = getMasterJpnList();
+  const updated = current.filter(j => j.id !== id);
+  saveMasterJpnList(updated);
+  return true;
+};
+
+export const resetMasterJpnToDefault = () => {
+  saveMasterJpnList(INITIAL_JPN_LIST);
+  return INITIAL_JPN_LIST;
+};
+
