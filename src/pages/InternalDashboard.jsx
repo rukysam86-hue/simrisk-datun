@@ -309,10 +309,15 @@ function PermohonanTable({ data, onDelete }) {
                         Detail
                       </Link>
                       <button
+                        type="button"
                         className="btn btn-outline"
-                        style={{ padding: '0.45rem 0.6rem', borderRadius: '8px', color: 'var(--color-danger-shadow)', borderColor: 'var(--color-danger-shadow)' }}
-                        onClick={() => onDelete(act.id)}
-                        title="Hapus Data"
+                        style={{ padding: '0.45rem 0.6rem', borderRadius: '8px', color: 'var(--color-danger-shadow)', borderColor: 'var(--color-danger-shadow)', cursor: 'pointer' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          onDelete(act.id);
+                        }}
+                        title="Hapus Data Permohonan"
                       >
                         <Trash2 size={15} />
                       </button>
@@ -604,10 +609,15 @@ function KegiatanTable({ data, onDelete }) {
                         Detail
                       </Link>
                       <button
+                        type="button"
                         className="btn btn-outline"
-                        style={{ padding: '0.45rem 0.6rem', borderRadius: '8px', color: 'var(--color-danger-shadow)', borderColor: 'var(--color-danger-shadow)' }}
-                        onClick={() => onDelete(act.id)}
-                        title="Hapus Data"
+                        style={{ padding: '0.45rem 0.6rem', borderRadius: '8px', color: 'var(--color-danger-shadow)', borderColor: 'var(--color-danger-shadow)', cursor: 'pointer' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          onDelete(act.id);
+                        }}
+                        title="Hapus Data Kegiatan"
                       >
                         <Trash2 size={15} />
                       </button>
@@ -648,9 +658,15 @@ function InternalDashboard() {
   useEffect(() => { loadData(); }, []);
 
   const handleDelete = async (id) => {
-    if (window.confirm('Yakin ingin menghapus data ini secara permanen?')) {
-      await deletePermohonan(id);
-      loadData();
+    if (window.confirm('Yakin ingin menghapus data permohonan ini secara permanen?')) {
+      // Optimistic update: langsung hilangkan seketika dari tabel di layar
+      setPermohonanList(prev => prev.filter(p => p.id !== id));
+      try {
+        await deletePermohonan(id);
+      } catch (err) {
+        console.error('Gagal menghapus permohonan:', err);
+      }
+      await loadData();
     }
   };
 

@@ -170,15 +170,42 @@ const INITIAL_MOCK_DATA = [
 ];
 
 // Helper Local Storage
+const DELETED_IDS_KEY = 'simrisk_datun_deleted_ids';
+
+export const getDeletedIds = () => {
+  try {
+    const raw = localStorage.getItem(DELETED_IDS_KEY);
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch (e) {
+    return new Set();
+  }
+};
+
+export const addDeletedId = (id) => {
+  try {
+    const set = getDeletedIds();
+    set.add(id);
+    localStorage.setItem(DELETED_IDS_KEY, JSON.stringify(Array.from(set)));
+  } catch (e) {}
+};
+
+export const removeDeletedId = (id) => {
+  try {
+    const set = getDeletedIds();
+    set.delete(id);
+    localStorage.setItem(DELETED_IDS_KEY, JSON.stringify(Array.from(set)));
+  } catch (e) {}
+};
+
 const getLocalStore = () => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
+    if (raw === null) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_MOCK_DATA));
       return INITIAL_MOCK_DATA;
     }
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : INITIAL_MOCK_DATA;
+    return Array.isArray(parsed) ? parsed : INITIAL_MOCK_DATA;
   } catch (err) {
     console.warn('LocalStorage error, using INITIAL_MOCK_DATA:', err);
     return INITIAL_MOCK_DATA;
@@ -194,7 +221,8 @@ const saveLocalStore = (data) => {
 };
 
 export const getAllPermohonan = async () => {
-  const localData = getLocalStore();
+  const deletedIds = getDeletedIds();
+  const localData = getLocalStore().filter(item => !deletedIds.has(item.id));
 
   if (isSupabaseConfigured) {
     try {
@@ -205,12 +233,15 @@ export const getAllPermohonan = async () => {
         .order('currentStep', { ascending: true });
 
       if (!response.error && response.data) {
+        // Filter out data yang sudah ditandai dihapus oleh pengguna
+        const activeSupabaseData = response.data.filter(item => !deletedIds.has(item.id));
+
         // Gabungkan data Supabase dengan data lokal yang baru dibuat
-        const supabaseIds = new Set(response.data.map(item => item.id));
+        const supabaseIds = new Set(activeSupabaseData.map(item => item.id));
         const unsyncedLocal = localData.filter(item => !supabaseIds.has(item.id));
 
         // Gabungan data: data lokal terbaru di paling atas
-        const merged = [...unsyncedLocal, ...response.data];
+        const merged = [...unsyncedLocal, ...activeSupabaseData];
         saveLocalStore(merged);
         return merged;
       } else if (response.error) {
@@ -245,6 +276,9 @@ export const getPermohonanById = async (id) => {
 };
 
 export const addPermohonan = async (newPermohonan) => {
+  // Pastikan ID ini dihapus dari daftar blacklist ID terhapus
+  removeDeletedId(newPermohonan.id);
+
   // 1. Selalu simpan ke localStorage terlebih dahulu agar data tidak hilang
   const store = getLocalStore();
   const existingIdx = store.findIndex(item => item.id === newPermohonan.id);
@@ -345,20 +379,31 @@ export const updatePermohonan = async (id, updatedData) => {
 };
 
 export const deletePermohonan = async (id) => {
+  // 1. Masukkan ke blacklist ID terhapus (mencegah data muncul kembali saat merge)
+  addDeletedId(id);
+
+  // 2. Hapus langsung dari localStorage
+  const store = getLocalStore();
+  const updatedStore = store.filter(item => item.id !== id);
+  saveLocalStore(updatedStore);
+
+  // 3. Hapus dari database cloud Supabase jika aktif
   if (isSupabaseConfigured) {
     try {
       const response = await supabase
         .from('permohonan')
         .delete()
         .eq('id', id);
-      if (!response.error) return true;
+      if (response.error) {
+        console.warn(`[Supabase] Catatan delete cloud (${id}):`, response.error);
+      } else {
+        console.log(`[Supabase] Data ID ${id} berhasil dihapus dari cloud.`);
+      }
     } catch (err) {
-      console.warn(`[Supabase] Gagal delete ${id}:`, err);
+      console.warn(`[Supabase] Exception saat delete ${id}:`, err);
     }
   }
-  const store = getLocalStore();
-  const updatedStore = store.filter(item => item.id !== id);
-  saveLocalStore(updatedStore);
+
   return true;
 };
 
