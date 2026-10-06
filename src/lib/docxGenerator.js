@@ -139,10 +139,95 @@ function parseInlineRuns(text) {
  * @param {string} markdownText - The AI analysis in markdown format
  * @param {string} reportLabel - Label for the report (e.g. "Data Awal", "Laporan #1")
  */
-export async function downloadAnalysisAsDocx(title, projectName, markdownText, reportLabel = '') {
+export async function downloadAnalysisAsDocx(title, projectName, markdownText, reportLabel = '', extraInfo = {}) {
   const now = new Date().toLocaleDateString('id-ID', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   });
+
+  const infoRows = [
+    new TableRow({
+      children: [
+        new TableCell({
+          children: [new Paragraph({ children: [new TextRun({ text: 'Proyek / Kegiatan', bold: true })] })],
+          width: { size: 30, type: WidthType.PERCENTAGE },
+          shading: { type: ShadingType.CLEAR, color: 'E8F4FD', fill: 'E8F4FD' },
+        }),
+        new TableCell({
+          children: [new Paragraph({ text: projectName || title })],
+        }),
+      ],
+    }),
+    new TableRow({
+      children: [
+        new TableCell({
+          children: [new Paragraph({ children: [new TextRun({ text: 'Laporan', bold: true })] })],
+          shading: { type: ShadingType.CLEAR, color: 'E8F4FD', fill: 'E8F4FD' },
+        }),
+        new TableCell({
+          children: [new Paragraph({ text: reportLabel || 'Data Awal' })],
+        }),
+      ],
+    }),
+    new TableRow({
+      children: [
+        new TableCell({
+          children: [new Paragraph({ children: [new TextRun({ text: 'Tanggal', bold: true })] })],
+          shading: { type: ShadingType.CLEAR, color: 'E8F4FD', fill: 'E8F4FD' },
+        }),
+        new TableCell({
+          children: [new Paragraph({ text: now })],
+        }),
+      ],
+    }),
+  ];
+
+  if (extraInfo.nilaiAnggaran) {
+    infoRows.push(
+      new TableRow({
+        children: [
+          new TableCell({
+            children: [new Paragraph({ children: [new TextRun({ text: 'Nilai Anggaran', bold: true })] })],
+            shading: { type: ShadingType.CLEAR, color: 'E8F4FD', fill: 'E8F4FD' },
+          }),
+          new TableCell({
+            children: [new Paragraph({ text: extraInfo.nilaiAnggaran })],
+          }),
+        ],
+      })
+    );
+  }
+
+  if (extraInfo.realisasiPencairan) {
+    infoRows.push(
+      new TableRow({
+        children: [
+          new TableCell({
+            children: [new Paragraph({ children: [new TextRun({ text: 'Realisasi Pencairan', bold: true })] })],
+            shading: { type: ShadingType.CLEAR, color: 'E8F4FD', fill: 'E8F4FD' },
+          }),
+          new TableCell({
+            children: [new Paragraph({ text: `${extraInfo.realisasiPencairan} (${extraInfo.persentasePencairan || '0%'} dari total dana)` })],
+          }),
+        ],
+      })
+    );
+  }
+
+  if (extraInfo.progresFisik) {
+    infoRows.push(
+      new TableRow({
+        children: [
+          new TableCell({
+            children: [new Paragraph({ children: [new TextRun({ text: 'Progres Fisik', bold: true })] })],
+            shading: { type: ShadingType.CLEAR, color: 'E8F4FD', fill: 'E8F4FD' },
+          }),
+          new TableCell({
+            children: [new Paragraph({ text: extraInfo.progresFisik })],
+          }),
+        ],
+      })
+    );
+  }
 
   const doc = new Document({
     numbering: {
@@ -188,42 +273,7 @@ export async function downloadAnalysisAsDocx(title, projectName, markdownText, r
           // Info table
           new Table({
             width: { size: 100, type: WidthType.PERCENTAGE },
-            rows: [
-              new TableRow({
-                children: [
-                  new TableCell({
-                    children: [new Paragraph({ children: [new TextRun({ text: 'Proyek / Kegiatan', bold: true })] })],
-                    width: { size: 30, type: WidthType.PERCENTAGE },
-                    shading: { type: ShadingType.CLEAR, color: 'E8F4FD', fill: 'E8F4FD' },
-                  }),
-                  new TableCell({
-                    children: [new Paragraph({ text: projectName || title })],
-                  }),
-                ],
-              }),
-              new TableRow({
-                children: [
-                  new TableCell({
-                    children: [new Paragraph({ children: [new TextRun({ text: 'Laporan', bold: true })] })],
-                    shading: { type: ShadingType.CLEAR, color: 'E8F4FD', fill: 'E8F4FD' },
-                  }),
-                  new TableCell({
-                    children: [new Paragraph({ text: reportLabel || 'Data Awal' })],
-                  }),
-                ],
-              }),
-              new TableRow({
-                children: [
-                  new TableCell({
-                    children: [new Paragraph({ children: [new TextRun({ text: 'Tanggal', bold: true })] })],
-                    shading: { type: ShadingType.CLEAR, color: 'E8F4FD', fill: 'E8F4FD' },
-                  }),
-                  new TableCell({
-                    children: [new Paragraph({ text: now })],
-                  }),
-                ],
-              }),
-            ],
+            rows: infoRows,
           }),
 
           new Paragraph({ text: '', spacing: { after: 400 } }),

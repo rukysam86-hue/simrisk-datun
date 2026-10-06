@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ShieldAlert, CheckCircle, FileText, Trash2, AlertTriangle, AlertCircle, ShieldCheck, Search, ChevronLeft, ChevronRight, Link as LinkIcon, Plus, X } from 'lucide-react';
+import { ShieldAlert, CheckCircle, FileText, Trash2, AlertTriangle, AlertCircle, ShieldCheck, Search, ChevronLeft, ChevronRight, Link as LinkIcon, Plus, X, Folder } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getAllPermohonan, deletePermohonan } from '../data/store';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -539,6 +539,24 @@ function KegiatanTable({ data, onDelete }) {
                         ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(act.monitoring.nilai)
                         : <span style={{ color: 'var(--color-text-muted)', fontWeight: 700 }}>—</span>}
                     </div>
+                    {(() => {
+                      const isInfrastruktur = (act.suratData?.kategoriPermohonan || 'Pendampingan Hukum Proyek Infrastruktur') === 'Pendampingan Hukum Proyek Infrastruktur';
+                      if (!isInfrastruktur) return null;
+                      const m = act.monitoring;
+                      if (!m) return null;
+                      let totalCair = Number(m.totalRealisasiPencairan || 0);
+                      if (!totalCair) {
+                        totalCair = Number(m.initialData?.realisasiPencairan || m.realisasiPencairan || 0);
+                        (m.reports || []).forEach(r => { totalCair += Number(r.realisasiPencairan || 0); });
+                      }
+                      if (totalCair <= 0) return null;
+                      const pct = m.nilai > 0 ? ((totalCair / m.nilai) * 100).toFixed(0) : 0;
+                      return (
+                        <div style={{ fontSize: '0.72rem', color: '#15803d', fontWeight: 700, marginTop: '2px', whiteSpace: 'nowrap' }}>
+                          Cair: {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalCair)} ({pct}%)
+                        </div>
+                      );
+                    })()}
                   </td>
 
                   {/* Progres */}
@@ -566,6 +584,18 @@ function KegiatanTable({ data, onDelete }) {
                       >
                         <LinkIcon size={15} />
                       </button>
+                      {(act.driveFolderUrl || act.suratData?.driveFolderUrl) && (
+                        <a
+                          href={act.driveFolderUrl || act.suratData?.driveFolderUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-outline"
+                          style={{ padding: '0.45rem 0.6rem', borderRadius: '8px', color: 'var(--color-primary-shadow)', borderColor: 'var(--color-primary-shadow)' }}
+                          title="Buka Folder Arsip Google Drive Kegiatan"
+                        >
+                          <Folder size={15} />
+                        </a>
+                      )}
                       <Link
                         to={`/permohonan/${act.id}`}
                         className="btn btn-secondary"

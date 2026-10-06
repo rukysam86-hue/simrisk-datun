@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, Clock, FileText, ShieldAlert, Download, Edit3, Save, X, Trash2, Activity, Sparkles, Plus, ExternalLink, Copy, FileDown } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Clock, FileText, ShieldAlert, Download, Edit3, Save, X, Trash2, Activity, Sparkles, Plus, ExternalLink, Copy, FileDown, DollarSign, CreditCard, TrendingUp, Wallet, CheckCircle2, AlertTriangle, Folder } from 'lucide-react';
 import { getPermohonanById, updatePermohonan, deletePermohonan } from '../data/store';
 import ReactMarkdown from 'react-markdown';
 import { downloadAnalysisAsDocx } from '../lib/docxGenerator';
+import DriveFileUpload from '../components/DriveFileUpload';
 
 function DetailPermohonan() {
   const { id } = useParams();
@@ -34,6 +35,8 @@ function DetailPermohonan() {
   const [isAddingInitialData, setIsAddingInitialData] = useState(false);
   const [formKegiatan, setFormKegiatan] = useState('');
   const [formNilai, setFormNilai] = useState('');
+  const [formRealisasiPencairan, setFormRealisasiPencairan] = useState('');
+  const [formPersentasePencairan, setFormPersentasePencairan] = useState('');
   const [formKasusPosisi, setFormKasusPosisi] = useState('');
   const [formPermasalahan, setFormPermasalahan] = useState('');
   const [formJenisAset, setFormJenisAset] = useState(['']);
@@ -150,6 +153,7 @@ function DetailPermohonan() {
   };
 
   const isAset = suratData?.kategoriPermohonan === 'Pendampingan Pemulihan/Penyelamatan Aset';
+  const isInfrastruktur = (suratData?.kategoriPermohonan || 'Pendampingan Hukum Proyek Infrastruktur') === 'Pendampingan Hukum Proyek Infrastruktur';
 
   const handleAddAsetAdmin = () => setFormJenisAset([...formJenisAset, '']);
   const handleRemoveAsetAdmin = (idx) => {
@@ -178,15 +182,112 @@ function DetailPermohonan() {
     return split[1] !== undefined ? rupiah + ',' + split[1] : rupiah;
   };
 
+  const formatCurrency = (value) => {
+    const num = Number(value) || 0;
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
+  };
+
+  const getDisbursementStats = () => {
+    const totalAnggaran = monitoringData?.nilai || 0;
+    const initialDisbursed = Number(monitoringData?.initialData?.realisasiPencairan || monitoringData?.realisasiPencairan || 0);
+    
+    let totalKumulatif = initialDisbursed;
+    const reports = monitoringData?.reports || [];
+    reports.forEach(rep => {
+      totalKumulatif += Number(rep.realisasiPencairan || 0);
+    });
+
+    const percentKumulatif = totalAnggaran > 0 ? ((totalKumulatif / totalAnggaran) * 100).toFixed(1) : '0';
+    const sisa = Math.max(0, totalAnggaran - totalKumulatif);
+
+    return {
+      totalAnggaran,
+      totalKumulatif,
+      percentKumulatif,
+      sisa
+    };
+  };
+
+  const getReportDisbursement = (index) => {
+    const totalAnggaran = monitoringData?.nilai || 0;
+    if (index === -1) {
+      const initVal = Number(monitoringData?.initialData?.realisasiPencairan || monitoringData?.realisasiPencairan || 0);
+      const initPct = monitoringData?.initialData?.persentasePencairan || (totalAnggaran > 0 ? `${((initVal / totalAnggaran) * 100).toFixed(1)}%` : '0%');
+      return {
+        tahap: initVal,
+        persenTahap: initPct,
+        kumulatif: initVal,
+        persenKumulatif: initPct,
+        sisa: Math.max(0, totalAnggaran - initVal)
+      };
+    }
+
+    const reports = monitoringData?.reports || [];
+    let kumulatif = Number(monitoringData?.initialData?.realisasiPencairan || monitoringData?.realisasiPencairan || 0);
+    for (let i = 0; i <= index; i++) {
+      const r = reports[i];
+      const val = Number(r?.realisasiPencairan || 0);
+      if (i < index) {
+        kumulatif += val;
+      } else if (i === index) {
+        kumulatif += val;
+        const pctTahap = r?.persentasePencairan || (totalAnggaran > 0 ? `${((val / totalAnggaran) * 100).toFixed(1)}%` : '0%');
+        const pctKumulatif = r?.persentaseKumulatif || (totalAnggaran > 0 ? `${((kumulatif / totalAnggaran) * 100).toFixed(1)}%` : '0%');
+        return {
+          tahap: val,
+          persenTahap: pctTahap,
+          kumulatif: r?.totalPencairanKumulatif || kumulatif,
+          persenKumulatif: pctKumulatif,
+          sisa: Math.max(0, totalAnggaran - (r?.totalPencairanKumulatif || kumulatif))
+        };
+      }
+    }
+
+    return { tahap: 0, persenTahap: '0%', kumulatif: 0, persenKumulatif: '0%', sisa: totalAnggaran };
+  };
+
+  const handleFormRealisasiChange = (value) => {
+    const formatted = formatRupiah(value);
+    setFormRealisasiPencairan(formatted);
+    const numeric = parseInt((value || '').replace(/\./g, ''), 10) || 0;
+    const totalAnggaran = parseInt((formNilai || '').replace(/\./g, ''), 10) || 0;
+    if (totalAnggaran > 0) {
+      const pct = ((numeric / totalAnggaran) * 100).toFixed(1);
+      setFormPersentasePencairan(pct);
+    }
+  };
+
+  const handleFormPersentaseChange = (value) => {
+    setFormPersentasePencairan(value);
+    const pct = parseFloat(value) || 0;
+    const totalAnggaran = parseInt((formNilai || '').replace(/\./g, ''), 10) || 0;
+    if (totalAnggaran > 0 && (!formRealisasiPencairan || formRealisasiPencairan === '0')) {
+      const nominal = Math.round((pct / 100) * totalAnggaran);
+      setFormRealisasiPencairan(formatRupiah(nominal.toString()));
+    }
+  };
+
   const handleSaveInitialDataAdmin = async (e) => {
     e.preventDefault();
     const dateStr = new Date().toISOString().split('T')[0];
+    const totalAnggaranNum = parseInt((formNilai || '').replace(/\./g, ''), 10) || 0;
+    const initDisbursedNum = parseInt((formRealisasiPencairan || '0').replace(/\./g, ''), 10) || 0;
+    const initPct = formPersentasePencairan ? `${formPersentasePencairan}%` : (totalAnggaranNum > 0 ? `${((initDisbursedNum / totalAnggaranNum) * 100).toFixed(1)}%` : '0%');
+    const initSisa = Math.max(0, totalAnggaranNum - initDisbursedNum);
+
     const newMonitoring = {
       kegiatan: formKegiatan,
-      nilai: parseInt((formNilai || '').replace(/\./g, ''), 10) || 0,
+      nilai: totalAnggaranNum,
       kasusPosisi: formKasusPosisi,
       progressKegiatan: formProgres,
       persentaseKegiatan: `${formPersentase}%`,
+      ...(isInfrastruktur ? {
+        realisasiPencairan: initDisbursedNum,
+        persentasePencairan: initPct,
+        totalRealisasiPencairan: initDisbursedNum,
+        persentasePencairanTotal: initPct,
+        sisaAnggaran: initSisa,
+      } : {}),
       hambatan: formHambatan,
       keterangan: formKeterangan,
       lastUpdate: dateStr,
@@ -194,6 +295,12 @@ function DetailPermohonan() {
         date: dateStr,
         progressKegiatan: formProgres,
         persentaseKegiatan: `${formPersentase}%`,
+        ...(isInfrastruktur ? {
+          realisasiPencairan: initDisbursedNum,
+          persentasePencairan: initPct,
+          totalPencairanKumulatif: initDisbursedNum,
+          persentaseKumulatif: initPct,
+        } : {}),
         hambatan: formHambatan,
         keterangan: formKeterangan,
         ...(isAset ? { permasalahan: formPermasalahan, jenisAset: formJenisAset.filter(a => a.trim() !== '') } : {})
@@ -247,30 +354,79 @@ function DetailPermohonan() {
     try {
       let prompt = `Anda adalah seorang ahli hukum perdata dan Tata Usaha Negara (TUN) sekaligus Jaksa Pengacara Negara (JPN) yang sangat berpengalaman dalam memberikan pertimbangan hukum atau pendampingan litigasi terhadap proyek permohonan pemerintah, BUMN, atau BUMD.`;
       
+      const totalAnggaran = monitoringData.nilai || 0;
+
       if (assessingReportIndex === -1 || assessingReportIndex === null) {
-        prompt += `\n\nTolong berikan analisis risiko, skor risiko (Rendah/Sedang/Tinggi), serta rekomendasi langkah mitigasi hukum dan teknis untuk proyek ini berdasarkan data awal pemohon:
+        if (isInfrastruktur) {
+          const info = getReportDisbursement(-1);
+          prompt += `\n\nTolong berikan analisis risiko, skor risiko (Rendah/Sedang/Tinggi), serta rekomendasi langkah mitigasi hukum dan teknis untuk proyek ini berdasarkan data awal pemohon:
+- Kategori Permohonan: Pendampingan Hukum Proyek Infrastruktur
 - Kegiatan: ${monitoringData.kegiatan}
-- Anggaran: ${monitoringData.nilai}
+- Total Nilai Anggaran Proyek: Rp ${formatRupiah(totalAnggaran)}
+- Realisasi Pencairan Anggaran Awal: Rp ${formatRupiah(info.tahap)} (${info.persenTahap})
+- Total Keseluruhan Dicairkan: Rp ${formatRupiah(info.kumulatif)} (${info.persenKumulatif} dari total dana)
+- Sisa Anggaran: Rp ${formatRupiah(info.sisa)}
 - Kasus Posisi: ${monitoringData.kasusPosisi}
-- Progress: ${monitoringData.initialData?.progressKegiatan || monitoringData.progressKegiatan} (${monitoringData.initialData?.persentaseKegiatan || monitoringData.persentaseKegiatan})
+- Progres Fisik: ${monitoringData.initialData?.progressKegiatan || monitoringData.progressKegiatan} (${monitoringData.initialData?.persentaseKegiatan || monitoringData.persentaseKegiatan})
+- Hambatan: ${monitoringData.initialData?.hambatan || monitoringData.hambatan}
+
+KORELASI PRESTASI FISIK VS PENCAIRAN ANGGARAN:
+- Progres Fisik: ${monitoringData.initialData?.persentaseKegiatan || monitoringData.persentaseKegiatan || '0%'}
+- Realisasi Pencairan: ${info.persenKumulatif} (Rp ${formatRupiah(info.kumulatif)})
+Evaluasi apakah pencairan uang muka / termin awal ini proporsional sesuai ketentuan kontrak dan perundang-undangan pengadaan, serta mitigasi risiko preventif awal yang perlu dilakukan JPN.`;
+        } else {
+          prompt += `\n\nTolong berikan analisis risiko, skor risiko (Rendah/Sedang/Tinggi), serta rekomendasi langkah mitigasi hukum dan teknis untuk permohonan ini berdasarkan data awal pemohon:
+- Kategori Permohonan: ${suratData?.kategoriPermohonan || '-'}
+- Kasus Posisi: ${monitoringData.kasusPosisi}
+${isAset ? `- Nilai Total Aset: Rp ${formatRupiah(totalAnggaran)}\n- Permasalahan: ${monitoringData.initialData?.permasalahan || '-'}\n- Jenis Aset: ${(monitoringData.initialData?.jenisAset || []).join(', ')}` : `- Nilai: Rp ${formatRupiah(totalAnggaran)}\n- Progres: ${monitoringData.initialData?.progressKegiatan || monitoringData.progressKegiatan} (${monitoringData.initialData?.persentaseKegiatan || monitoringData.persentaseKegiatan})`}
 - Hambatan: ${monitoringData.initialData?.hambatan || monitoringData.hambatan}`;
+        }
       } else {
         const report = (monitoringData.reports || [])[assessingReportIndex] || {};
-        
-        prompt += `\n\nKonteks Proyek: ${monitoringData.kegiatan} (Anggaran: ${monitoringData.nilai})
+        if (isInfrastruktur) {
+          const info = getReportDisbursement(assessingReportIndex);
+          
+          prompt += `\n\nKonteks Proyek: ${monitoringData.kegiatan} (Total Nilai Anggaran: Rp ${formatRupiah(totalAnggaran)})
 Kasus Posisi: ${monitoringData.kasusPosisi}
 
-Riwayat Hambatan Historis:
-- Data Awal: ${monitoringData.initialData?.hambatan || monitoringData.hambatan}`;
+Riwayat Progres & Pencairan Historis:
+- Data Awal: Fisik ${monitoringData.initialData?.persentaseKegiatan || monitoringData.persentaseKegiatan || '0%'}, Pencairan Rp ${formatRupiah(getReportDisbursement(-1).kumulatif)} (${getReportDisbursement(-1).persenKumulatif}), Hambatan: ${monitoringData.initialData?.hambatan || monitoringData.hambatan || '-'}`;
 
-        for(let i = 0; i < assessingReportIndex; i++) {
-           prompt += `\n- Progres ${i+1}: ${(monitoringData.reports || [])[i]?.hambatan || '-'}`;
-        }
-        
-        prompt += `\n\nBerdasarkan riwayat di atas, tolong berikan analisis risiko, skor risiko (Rendah/Sedang/Tinggi), serta rekomendasi langkah mitigasi hukum dan teknis untuk LAPORAN PROGRES TERBARU berikut ini:
-- Progress Saat Ini: ${report.progressKegiatan} (${report.persentaseKegiatan})
+          for(let i = 0; i < assessingReportIndex; i++) {
+             const r = (monitoringData.reports || [])[i] || {};
+             const rInfo = getReportDisbursement(i);
+             prompt += `\n- Progres ${i+1}: Fisik ${r.persentaseKegiatan || '0%'}, Pencairan Tahap Ini Rp ${formatRupiah(rInfo.tahap)} (Total Kumulatif: Rp ${formatRupiah(rInfo.kumulatif)} / ${rInfo.persenKumulatif}), Hambatan: ${r.hambatan || '-'}`;
+          }
+          
+          prompt += `\n\nBerdasarkan riwayat di atas, tolong berikan analisis risiko, skor risiko (Rendah/Sedang/Tinggi), serta rekomendasi langkah mitigasi hukum dan teknis JPN untuk LAPORAN PROGRES TERBARU berikut ini:
+- Progres Fisik Saat Ini: ${report.progressKegiatan} (${report.persentaseKegiatan})
+- Realisasi Pencairan Anggaran Tahap Ini: Rp ${formatRupiah(info.tahap)} (${info.persenTahap})
+- TOTAL KESELURUHAN ANGGARAN YANG SUDAH DICAIRKAN: Rp ${formatRupiah(info.kumulatif)} (${info.persenKumulatif} dari total dana)
+- Sisa Anggaran Belum Dicairkan: Rp ${formatRupiah(info.sisa)}
+- Hambatan Saat Ini: ${report.hambatan || '-'}
+- Keterangan Tambahan: ${report.keterangan || '-'}
+
+ANALISIS KRITIS KORELASI PROGRES FISIK VS REALISASI PENCAIRAN ANGGARAN:
+- Progres Fisik: ${report.persentaseKegiatan || '0%'}
+- Total Realisasi Pencairan Anggaran: ${info.persenKumulatif} (Rp ${formatRupiah(info.kumulatif)} dari total Rp ${formatRupiah(totalAnggaran)})
+Tinjau secara seksama:
+1. Apakah terjadi pembayaran mendahului prestasi fisik (kelebihan bayar/overpayment) yang berpotensi menimbulkan risiko hukum kerugian keuangan negara atau wanprestasi penyedia jasa?
+2. Atau apakah pencairan anggaran tertunda secara tidak wajar terhadap kemajuan fisik yang berpotensi memicu klaim kontraktual atau penghentian pekerjaan oleh kontraktor?
+3. Langkah pencegahan (preventif) dan rekomendasi yuridis Jaksa Pengacara Negara (JPN) bagi instansi pemohon.`;
+        } else {
+          prompt += `\n\nKonteks Permohonan: ${monitoringData.kegiatan || suratData?.perihal}
+Kasus Posisi: ${monitoringData.kasusPosisi}
+Riwayat Sebelumnya:
+- Data Awal: Hambatan: ${monitoringData.initialData?.hambatan || monitoringData.hambatan || '-'}`;
+          for(let i = 0; i < assessingReportIndex; i++) {
+             const r = (monitoringData.reports || [])[i] || {};
+             prompt += `\n- Laporan ${i+1}: Hambatan: ${r.hambatan || '-'}`;
+          }
+          prompt += `\n\nBerdasarkan riwayat di atas, tolong berikan analisis risiko, skor risiko (Rendah/Sedang/Tinggi), serta rekomendasi langkah mitigasi untuk LAPORAN TERBARU berikut ini:
+${isAset ? `- Nominal Aset Pulih Laporan Ini: Rp ${formatRupiah(report.nilaiDipulihkan || 0)}` : `- Progres: ${report.progressKegiatan} (${report.persentaseKegiatan})`}
 - Hambatan Saat Ini: ${report.hambatan || '-'}
 - Keterangan Tambahan: ${report.keterangan || '-'}`;
+        }
       }
 
       prompt += `\n\nBerikan respons secara profesional, padat, dan langsung pada substansi hukum dan risiko proyek. Pertimbangkan apakah hambatan semakin memburuk, menetap, atau membaik dari laporan-laporan sebelumnya.`;
@@ -388,9 +544,28 @@ Riwayat Hambatan Historis:
             </p>
           </div>
         </div>
-        <button className="btn btn-outline" style={{ padding: '0.5rem 1rem', color: 'var(--color-danger-shadow)', borderColor: 'var(--color-danger-shadow)' }} onClick={handleDelete}>
-          <Trash2 size={20} style={{ marginRight: '0.5rem' }} /> Hapus
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          {suratData.driveFolderUrl && (
+            <a
+              href={suratData.driveFolderUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-outline"
+              style={{
+                padding: '0.5rem 1rem',
+                color: 'var(--color-primary-shadow)',
+                borderColor: 'var(--color-primary-shadow)',
+                textDecoration: 'none'
+              }}
+              title="Buka Folder Arsip Google Drive Kegiatan Ini"
+            >
+              <Folder size={18} style={{ marginRight: '0.4rem' }} /> Folder Drive
+            </a>
+          )}
+          <button className="btn btn-outline" style={{ padding: '0.5rem 1rem', color: 'var(--color-danger-shadow)', borderColor: 'var(--color-danger-shadow)' }} onClick={handleDelete}>
+            <Trash2 size={20} style={{ marginRight: '0.5rem' }} /> Hapus
+          </button>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '2rem' }}>
@@ -760,16 +935,47 @@ Riwayat Hambatan Historis:
                     </>
                   )}
                   {!isAset && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                      <div>
-                        <label className="form-label" style={{ fontWeight: 600 }}>Progress Kegiatan</label>
-                        <input className="form-input" required value={formProgres} onChange={e => setFormProgres(e.target.value)} placeholder="Contoh: Tahap Pengadaan / Konstruksi Awal" />
+                    <>
+                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                        <div>
+                          <label className="form-label" style={{ fontWeight: 600 }}>Progress Kegiatan</label>
+                          <input className="form-input" required value={formProgres} onChange={e => setFormProgres(e.target.value)} placeholder="Contoh: Tahap Pengadaan / Konstruksi Awal" />
+                        </div>
+                        <div>
+                          <label className="form-label" style={{ fontWeight: 600 }}>Persentase Fisik (%)</label>
+                          <input type="number" className="form-input" required value={formPersentase} onChange={e => setFormPersentase(e.target.value)} placeholder="0 - 100" />
+                        </div>
                       </div>
-                      <div>
-                        <label className="form-label" style={{ fontWeight: 600 }}>Persentase (%)</label>
-                        <input type="number" className="form-input" required value={formPersentase} onChange={e => setFormPersentase(e.target.value)} placeholder="0 - 100" />
-                      </div>
-                    </div>
+
+                      {isInfrastruktur && (
+                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                          <div>
+                            <label className="form-label" style={{ fontWeight: 600 }}>Realisasi Pencairan Anggaran</label>
+                            <div style={{ display: 'flex', alignItems: 'center', background: 'white', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '0 0.5rem' }}>
+                              <span style={{ fontWeight: 700, paddingRight: '0.5rem', color: 'var(--color-text-muted)' }}>Rp</span>
+                              <input
+                                type="text"
+                                style={{ flex: 1, padding: '0.6rem 0', border: 'none', outline: 'none', background: 'transparent' }}
+                                placeholder="0 (Uang Muka / Termin Awal)"
+                                value={formRealisasiPencairan}
+                                onChange={e => handleFormRealisasiChange(e.target.value)}
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="form-label" style={{ fontWeight: 600 }}>% Pencairan</label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              className="form-input"
+                              value={formPersentasePencairan}
+                              onChange={e => handleFormPersentaseChange(e.target.value)}
+                              placeholder="0 - 100"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                   <div className="form-group" style={{ marginBottom: '1rem' }}>
                     <label className="form-label" style={{ fontWeight: 600 }}>Hambatan / Kendala</label>
@@ -825,6 +1031,84 @@ Riwayat Hambatan Historis:
                     <div style={{ fontWeight: 700 }}>{monitoringData.lastUpdate || '-'}</div>
                   </div>
                 </div>
+
+                {isInfrastruktur && (() => {
+                  const stats = getDisbursementStats();
+                  const latestReport = (monitoringData.reports && monitoringData.reports.length > 0)
+                    ? monitoringData.reports[monitoringData.reports.length - 1]
+                    : monitoringData.initialData;
+                  const physicalPct = parseFloat((latestReport?.persentaseKegiatan || monitoringData.persentaseKegiatan || '0').replace('%', '')) || 0;
+                  const financialPct = parseFloat(stats.percentKumulatif) || 0;
+                  const deviasi = financialPct - physicalPct;
+
+                  return (
+                    <div style={{
+                      marginBottom: '1.25rem',
+                      background: 'linear-gradient(135deg, #f8fdf8 0%, #f0fdf4 100%)',
+                      border: '1px solid #bbf7d0',
+                      borderRadius: '8px',
+                      padding: '1rem',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, color: '#166534', fontSize: '0.9rem' }}>
+                          <DollarSign size={18} /> Realisasi Pencairan Anggaran & Progres Keuangan
+                        </div>
+                        {deviasi > 10 ? (
+                          <span style={{ fontSize: '0.75rem', background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <AlertTriangle size={12} /> Peringatan: Pencairan Keuangan (+{deviasi.toFixed(1)}%) Melampaui Progres Fisik
+                          </span>
+                        ) : deviasi < -15 ? (
+                          <span style={{ fontSize: '0.75rem', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <TrendingUp size={12} /> Pencairan Lambat (Deviasi {deviasi.toFixed(1)}%)
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '0.75rem', background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 700 }}>
+                            ✓ Keuangan & Fisik Seimbang
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                        <div style={{ background: 'white', padding: '0.6rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'block' }}>Total Pagu Dana:</span>
+                          <strong style={{ fontSize: '0.95rem', color: '#1e293b' }}>{formatCurrency(stats.totalAnggaran)}</strong>
+                        </div>
+                        <div style={{ background: 'white', padding: '0.6rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'block' }}>Total Dicairkan:</span>
+                          <strong style={{ fontSize: '0.95rem', color: '#15803d' }}>
+                            {formatCurrency(stats.totalKumulatif)} <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>({stats.percentKumulatif}%)</span>
+                          </strong>
+                        </div>
+                        <div style={{ background: 'white', padding: '0.6rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'block' }}>Sisa Anggaran:</span>
+                          <strong style={{ fontSize: '0.95rem', color: stats.sisa > 0 ? '#334155' : '#15803d' }}>{formatCurrency(stats.sisa)}</strong>
+                        </div>
+                      </div>
+
+                      {/* Progress Comparison Bars */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.2rem' }}>
+                            <span style={{ color: 'var(--color-text-muted)' }}>Pencairan Keuangan</span>
+                            <span style={{ fontWeight: 700, color: '#15803d' }}>{stats.percentKumulatif}%</span>
+                          </div>
+                          <div style={{ height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{ width: `${Math.min(100, parseFloat(stats.percentKumulatif))}%`, height: '100%', background: '#16a34a', borderRadius: '3px' }} />
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.2rem' }}>
+                            <span style={{ color: 'var(--color-text-muted)' }}>Progres Fisik Lapangan</span>
+                            <span style={{ fontWeight: 700, color: 'var(--color-primary)' }}>{physicalPct}%</span>
+                          </div>
+                          <div style={{ height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{ width: `${Math.min(100, physicalPct)}%`, height: '100%', background: 'var(--color-primary)', borderRadius: '3px' }} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
                 
                 <div style={{ marginBottom: '1rem' }}>
                   <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Kasus Posisi</span>
@@ -876,6 +1160,7 @@ Riwayat Hambatan Historis:
                       <tr>
                         <th>Tahap / Waktu</th>
                         <th>Progres</th>
+                        {isInfrastruktur && <th>Realisasi Pencairan Anggaran</th>}
                         <th>Hambatan / Catatan</th>
                         <th>Status Risiko & Catatan Kejati</th>
                         <th style={{ width: '130px' }}>Aksi</th>
@@ -891,6 +1176,22 @@ Riwayat Hambatan Historis:
                         <td>
                           <div style={{ fontWeight: 700 }}>{monitoringData.initialData?.progressKegiatan || monitoringData.progressKegiatan || '-'} ({monitoringData.initialData?.persentaseKegiatan || monitoringData.persentaseKegiatan || '0%'})</div>
                         </td>
+                        {isInfrastruktur && (() => {
+                          const dis = getReportDisbursement(-1);
+                          return (
+                            <td>
+                              <div style={{ fontWeight: 700, color: dis.tahap > 0 ? '#1b5e20' : 'var(--color-text-muted)' }}>
+                                {dis.tahap > 0 ? formatCurrency(dis.tahap) : 'Rp 0'}
+                              </div>
+                              <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                                Termin: {dis.persenTahap}
+                              </div>
+                              <div style={{ fontSize: '0.78rem', marginTop: '0.25rem', padding: '0.2rem 0.45rem', background: '#eef7ff', color: 'var(--color-primary-shadow)', borderRadius: '4px', display: 'inline-block', fontWeight: 600 }}>
+                                Total Dicairkan: {formatCurrency(dis.kumulatif)} ({dis.persenKumulatif})
+                              </div>
+                            </td>
+                          );
+                        })()}
                         <td>
                           <div style={{ fontSize: '0.9rem', color: '#c0392b' }}>
                             <div dangerouslySetInnerHTML={{ __html: monitoringData.initialData?.hambatan || monitoringData.hambatan || '-' }} />
@@ -900,9 +1201,19 @@ Riwayat Hambatan Historis:
                               <span style={{ fontWeight: 700, color: 'var(--color-text-muted)' }}>Ket:</span> <div dangerouslySetInnerHTML={{ __html: monitoringData.initialData?.keterangan || monitoringData.keterangan }} />
                             </div>
                           )}
-                          {(monitoringData.initialData?.linkDokumen || monitoringData.linkDokumen) && (
-                            <div style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>
-                              <a href={monitoringData.initialData?.linkDokumen || monitoringData.linkDokumen} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-secondary-shadow)', textDecoration: 'underline', fontWeight: 600 }}>Lihat Dokumen</a>
+                          {((monitoringData.initialData?.dokumenFiles && monitoringData.initialData.dokumenFiles.length > 0) || (monitoringData.initialData?.linkDokumen || monitoringData.linkDokumen)) && (
+                            <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                              {monitoringData.initialData?.dokumenFiles && monitoringData.initialData.dokumenFiles.length > 0 ? (
+                                monitoringData.initialData.dokumenFiles.map((doc, dIdx) => (
+                                  <a key={dIdx} href={doc.url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--color-secondary-shadow)', textDecoration: 'underline', fontWeight: 600, fontSize: '0.82rem' }}>
+                                    <FileText size={12} /> {doc.name || `Dokumen ${dIdx + 1}`}
+                                  </a>
+                                ))
+                              ) : (
+                                <a href={monitoringData.initialData?.linkDokumen || monitoringData.linkDokumen} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-secondary-shadow)', textDecoration: 'underline', fontWeight: 600, fontSize: '0.85rem' }}>
+                                  Lihat Dokumen
+                                </a>
+                              )}
                             </div>
                           )}
                         </td>
@@ -961,6 +1272,22 @@ Riwayat Hambatan Historis:
                               </>
                             )}
                           </td>
+                          {isInfrastruktur && (() => {
+                            const dis = getReportDisbursement(idx);
+                            return (
+                              <td>
+                                <div style={{ fontWeight: 700, color: dis.tahap > 0 ? '#1b5e20' : 'var(--color-text-muted)' }}>
+                                  {dis.tahap > 0 ? formatCurrency(dis.tahap) : 'Rp 0'}
+                                </div>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                                  Termin: {dis.persenTahap}
+                                </div>
+                                <div style={{ fontSize: '0.78rem', marginTop: '0.25rem', padding: '0.2rem 0.45rem', background: '#eef7ff', color: 'var(--color-primary-shadow)', borderRadius: '4px', display: 'inline-block', fontWeight: 600 }}>
+                                  Total Dicairkan: {formatCurrency(dis.kumulatif)} ({dis.persenKumulatif})
+                                </div>
+                              </td>
+                            );
+                          })()}
                           <td>
                             <div style={{ fontSize: '0.9rem', color: '#c0392b' }}>
                               <div dangerouslySetInnerHTML={{ __html: rep.hambatan || '-' }} />
@@ -970,9 +1297,19 @@ Riwayat Hambatan Historis:
                                 <span style={{ fontWeight: 700, color: 'var(--color-text-muted)' }}>Ket:</span> <div dangerouslySetInnerHTML={{ __html: rep.keterangan }} />
                               </div>
                             )}
-                            {rep.linkDokumen && (
-                              <div style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>
-                                <a href={rep.linkDokumen} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-secondary-shadow)', textDecoration: 'underline', fontWeight: 600 }}>Lihat Dokumen</a>
+                            {((rep.dokumenFiles && rep.dokumenFiles.length > 0) || rep.linkDokumen) && (
+                              <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                {rep.dokumenFiles && rep.dokumenFiles.length > 0 ? (
+                                  rep.dokumenFiles.map((doc, dIdx) => (
+                                    <a key={dIdx} href={doc.url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--color-secondary-shadow)', textDecoration: 'underline', fontWeight: 600, fontSize: '0.82rem' }}>
+                                      <FileText size={12} /> {doc.name || `Dokumen ${dIdx + 1}`}
+                                    </a>
+                                  ))
+                                ) : (
+                                  <a href={rep.linkDokumen} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-secondary-shadow)', textDecoration: 'underline', fontWeight: 600, fontSize: '0.85rem' }}>
+                                    Lihat Dokumen
+                                  </a>
+                                )}
                               </div>
                             )}
                           </td>
@@ -1037,7 +1374,16 @@ Riwayat Hambatan Historis:
                             <button
                               className="btn btn-outline"
                               style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', borderColor: '#27ae60', color: '#27ae60', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-                              onClick={() => downloadAnalysisAsDocx(monitoringData?.kegiatan || id, monitoringData?.kegiatan, aiResponse, 'Data Awal')}
+                              onClick={() => {
+                                const dis = getReportDisbursement(-1);
+                                const extra = isInfrastruktur ? {
+                                  nilaiAnggaran: formatCurrency(monitoringData?.nilai || 0),
+                                  realisasiPencairan: formatCurrency(dis.tahap),
+                                  persentasePencairan: dis.persenKumulatif,
+                                  progresFisik: `${monitoringData?.initialData?.progressKegiatan || monitoringData?.progressKegiatan || '-'} (${monitoringData?.initialData?.persentaseKegiatan || monitoringData?.persentaseKegiatan || '0%'})`
+                                } : {};
+                                downloadAnalysisAsDocx(monitoringData?.kegiatan || id, monitoringData?.kegiatan, aiResponse, 'Data Awal', extra);
+                              }}
                             >
                               <FileDown size={14} /> Unduh Word
                             </button>
@@ -1102,17 +1448,20 @@ Riwayat Hambatan Historis:
                       />
                     </div>
 
-                    <div style={{ marginBottom: '1.25rem' }}>
-                      <label className="form-label" style={{ fontWeight: 600 }}>Link Dokumen Saran (Google Drive / PDF)</label>
-                      <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '0.5rem', marginTop: 0 }}>Upload file Word yang diunduh ke Google Drive, lalu tempel link-nya di sini. Pemohon dapat mengunduhnya dari portal mereka.</p>
-                      <input
-                        type="url"
-                        className="form-input"
-                        placeholder="https://drive.google.com/..."
-                        value={adminSaranDriveUrl}
-                        onChange={e => setAdminSaranDriveUrl(e.target.value)}
-                      />
-                    </div>
+                    <DriveFileUpload
+                      label="Dokumen Saran Tindakan JPN (Google Drive)"
+                      value={adminSaranDriveUrl}
+                      onChange={(url, meta) => {
+                        setAdminSaranDriveUrl(url);
+                        if (meta?.folderUrl && !suratData.driveFolderUrl) {
+                          setSuratData(prev => ({ ...prev, driveFolderUrl: meta.folderUrl }));
+                        }
+                      }}
+                      permohonanId={id}
+                      permohonanTitle={monitoringData?.kegiatan || suratData?.perihal || id}
+                      folderCategory="saran"
+                      helpText="Unggah berkas Word (.docx) atau PDF surat saran untuk pemohon"
+                    />
 
                     <button className="btn btn-primary" style={{ width: '100%', background: '#8e44ad', borderColor: '#732d91' }} onClick={handleSaveRiskAssessment}>
                       Simpan Penilaian Kejati
@@ -1167,6 +1516,52 @@ Riwayat Hambatan Historis:
             </div>
             
             <div style={{ display: 'grid', gap: '1.5rem' }}>
+              {isInfrastruktur && (() => {
+                const dis = getReportDisbursement(assessingReportIndex);
+                const isInitial = assessingReportIndex === -1;
+                const rep = isInitial ? (monitoringData?.initialData || monitoringData) : (monitoringData?.reports?.[assessingReportIndex] || {});
+                return (
+                  <div style={{
+                    background: 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)',
+                    border: '1px solid #bbf7d0',
+                    borderRadius: '8px',
+                    padding: '1rem',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: '#166534', marginBottom: '0.75rem', fontSize: '0.95rem' }}>
+                      <DollarSign size={18} /> Informasi Pencairan & Progres ({isInitial ? 'Data Awal' : `Laporan #${assessingReportIndex + 1}`})
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
+                      <div style={{ background: 'white', padding: '0.6rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'block' }}>Total Pagu Dana:</span>
+                        <strong style={{ fontSize: '0.9rem', color: '#1e293b' }}>{formatCurrency(monitoringData?.nilai || 0)}</strong>
+                      </div>
+                      <div style={{ background: 'white', padding: '0.6rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'block' }}>Pencairan Termin Ini:</span>
+                        <strong style={{ fontSize: '0.9rem', color: '#15803d' }}>
+                          {formatCurrency(dis.tahap)} <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>({dis.persenTahap})</span>
+                        </strong>
+                      </div>
+                      <div style={{ background: 'white', padding: '0.6rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'block' }}>Total Sudah Dicairkan:</span>
+                        <strong style={{ fontSize: '0.9rem', color: '#1e293b' }}>
+                          {formatCurrency(dis.kumulatif)} <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#15803d' }}>({dis.persenKumulatif})</span>
+                        </strong>
+                      </div>
+                      <div style={{ background: 'white', padding: '0.6rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'block' }}>Sisa Anggaran:</span>
+                        <strong style={{ fontSize: '0.9rem', color: '#334155' }}>{formatCurrency(dis.sisa)}</strong>
+                      </div>
+                      <div style={{ background: 'white', padding: '0.6rem 0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'block' }}>Progres Fisik:</span>
+                        <strong style={{ fontSize: '0.9rem', color: 'var(--color-primary)' }}>
+                          {rep?.progressKegiatan || '-'} ({rep?.persentaseKegiatan || '0%'})
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
               <div>
                 <span style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', fontWeight: 700, display: 'block', marginBottom: '0.5rem' }}>Kasus Posisi (Konteks Proyek):</span>
                 <div style={{ background: 'var(--color-surface)', padding: '1rem', borderRadius: '8px' }}>{monitoringData?.kasusPosisi || '-'}</div>
@@ -1194,7 +1589,16 @@ Riwayat Hambatan Historis:
                           style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', borderColor: '#27ae60', color: '#27ae60', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
                           onClick={() => {
                             const label = assessingReportIndex === -1 ? 'Data Awal' : `Laporan #${assessingReportIndex + 1}`;
-                            downloadAnalysisAsDocx(monitoringData?.kegiatan || id, monitoringData?.kegiatan, aiResponse, label);
+                            const dis = getReportDisbursement(assessingReportIndex);
+                            const isInitial = assessingReportIndex === -1;
+                            const rep = isInitial ? (monitoringData?.initialData || monitoringData) : (monitoringData?.reports?.[assessingReportIndex] || {});
+                            const extra = isInfrastruktur ? {
+                              nilaiAnggaran: formatCurrency(monitoringData?.nilai || 0),
+                              realisasiPencairan: formatCurrency(dis.tahap),
+                              persentasePencairan: dis.persenKumulatif,
+                              progresFisik: `${rep?.progressKegiatan || '-'} (${rep?.persentaseKegiatan || '0%'})`
+                            } : {};
+                            downloadAnalysisAsDocx(monitoringData?.kegiatan || id, monitoringData?.kegiatan, aiResponse, label, extra);
                           }}
                         >
                           <FileDown size={14} /> Unduh Word
@@ -1248,17 +1652,20 @@ Riwayat Hambatan Historis:
                   <textarea className="form-input" rows="3" value={adminRiskNotes} onChange={e => setAdminRiskNotes(e.target.value)} placeholder="Tuliskan instruksi langkah mitigasi yang harus dipenuhi oleh pemohon pada pelaporan berikutnya..."></textarea>
                 </div>
 
-                <div style={{ marginBottom: '1rem' }}>
-                  <label className="form-label" style={{ fontWeight: 600 }}>Link Dokumen Saran (Google Drive / PDF)</label>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '0.5rem', marginTop: 0 }}>Upload file Word yang diunduh ke Google Drive, lalu tempel link-nya di sini. Pemohon dapat mengunduhnya dari portal mereka.</p>
-                  <input
-                    type="url"
-                    className="form-input"
-                    placeholder="https://drive.google.com/..."
-                    value={adminSaranDriveUrl}
-                    onChange={e => setAdminSaranDriveUrl(e.target.value)}
-                  />
-                </div>
+                <DriveFileUpload
+                  label="Dokumen Saran Tindakan JPN (Google Drive)"
+                  value={adminSaranDriveUrl}
+                  onChange={(url, meta) => {
+                    setAdminSaranDriveUrl(url);
+                    if (meta?.folderUrl && !suratData.driveFolderUrl) {
+                      setSuratData(prev => ({ ...prev, driveFolderUrl: meta.folderUrl }));
+                    }
+                  }}
+                  permohonanId={id}
+                  permohonanTitle={monitoringData?.kegiatan || suratData?.perihal || id}
+                  folderCategory="saran"
+                  helpText="Unggah berkas Word (.docx) atau PDF surat saran untuk pemohon"
+                />
               </div>
             </div>
             
@@ -1388,15 +1795,20 @@ Riwayat Hambatan Historis:
                 <button className="btn btn-outline" style={{ width: '100%', padding: '0.5rem', fontSize: '0.85rem', borderStyle: 'dashed' }} onClick={tambahJpn}>+ Tambah Anggota JPN</button>
               </div>
 
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>Tautan Dokumen (Google Drive PDF)</label>
-                <input
-                  className="form-input"
-                  value={sp1Data.pdfUrl}
-                  onChange={(e) => setSp1Data({ ...sp1Data, pdfUrl: e.target.value })}
-                  placeholder="https://..."
-                />
-              </div>
+              <DriveFileUpload
+                label="Berkas Dokumen SP-1 (Google Drive)"
+                value={sp1Data.pdfUrl}
+                onChange={(url, meta) => {
+                  setSp1Data({ ...sp1Data, pdfUrl: url });
+                  if (meta?.folderUrl && !suratData.driveFolderUrl) {
+                    setSuratData(prev => ({ ...prev, driveFolderUrl: meta.folderUrl }));
+                  }
+                }}
+                permohonanId={id}
+                permohonanTitle={monitoringData?.kegiatan || suratData?.perihal || id}
+                folderCategory="sp1"
+                helpText="Unggah scan dokumen SP-1 resmi (.pdf)"
+              />
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
@@ -1468,15 +1880,20 @@ Riwayat Hambatan Historis:
                 </div>
               </div>
               
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>Lampiran File Telaahan (Link Google Drive PDF)</label>
-                <input
-                  className="form-input"
-                  value={telaahData.pdfUrl}
-                  onChange={(e) => setTelaahData({ ...telaahData, pdfUrl: e.target.value })}
-                  placeholder="https://..."
-                />
-              </div>
+              <DriveFileUpload
+                label="Berkas Lembar Telaahan Hukum (Google Drive)"
+                value={telaahData.pdfUrl}
+                onChange={(url, meta) => {
+                  setTelaahData({ ...telaahData, pdfUrl: url });
+                  if (meta?.folderUrl && !suratData.driveFolderUrl) {
+                    setSuratData(prev => ({ ...prev, driveFolderUrl: meta.folderUrl }));
+                  }
+                }}
+                permohonanId={id}
+                permohonanTitle={monitoringData?.kegiatan || suratData?.perihal || id}
+                folderCategory="telaahan"
+                helpText="Unggah berkas telaahan yuridis (.pdf atau .docx)"
+              />
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
@@ -1540,15 +1957,20 @@ Riwayat Hambatan Historis:
                 <button className="btn btn-outline" style={{ width: '100%', padding: '0.5rem', fontSize: '0.85rem', borderStyle: 'dashed' }} onClick={tambahJpnSp2}>+ Tambah Jaksa</button>
               </div>
 
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>Lampiran SP-2 (Link Google Drive PDF)</label>
-                <input
-                  className="form-input"
-                  value={sp2Data.pdfUrl}
-                  onChange={(e) => setSp2Data({ ...sp2Data, pdfUrl: e.target.value })}
-                  placeholder="https://..."
-                />
-              </div>
+              <DriveFileUpload
+                label="Berkas Surat Perintah SP-2 (Google Drive)"
+                value={sp2Data.pdfUrl}
+                onChange={(url, meta) => {
+                  setSp2Data({ ...sp2Data, pdfUrl: url });
+                  if (meta?.folderUrl && !suratData.driveFolderUrl) {
+                    setSuratData(prev => ({ ...prev, driveFolderUrl: meta.folderUrl }));
+                  }
+                }}
+                permohonanId={id}
+                permohonanTitle={monitoringData?.kegiatan || suratData?.perihal || id}
+                folderCategory="sp2"
+                helpText="Unggah scan dokumen SP-2 resmi (.pdf)"
+              />
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>

@@ -1,10 +1,13 @@
 import { useState } from 'react';
-import { Save, Mail, Calendar, FileText, Link as LinkIcon, Building } from 'lucide-react';
+import { Save, Mail, Calendar, FileText, Building } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { addPermohonan, generateId } from '../data/store';
+import DriveFileUpload from '../components/DriveFileUpload';
 
 function PermohonanForm() {
   const navigate = useNavigate();
+  const [permohonanId] = useState(() => generateId());
+  const [driveFolderUrl, setDriveFolderUrl] = useState('');
   const [formData, setFormData] = useState({
     asalSurat: '',
     nomorSurat: '',
@@ -22,10 +25,10 @@ function PermohonanForm() {
     setIsSubmitting(true);
     
     // Create the DB record
-    const newId = generateId();
     const newPermohonan = {
-      id: newId,
+      id: permohonanId,
       currentStep: 1, // Start at step 1
+      driveFolderUrl: driveFolderUrl,
       suratData: {
         asalSurat: formData.asalSurat,
         nomorSurat: formData.nomorSurat,
@@ -33,7 +36,8 @@ function PermohonanForm() {
         perihal: formData.perihal,
         isiSurat: formData.isiSurat,
         pdfUrl: formData.linkSurat,
-        kategoriPermohonan: formData.kategoriPermohonan
+        kategoriPermohonan: formData.kategoriPermohonan,
+        driveFolderUrl: driveFolderUrl
       },
       sp1Data: { timJpn: [] },
       telaahData: {},
@@ -43,7 +47,7 @@ function PermohonanForm() {
 
     try {
       await addPermohonan(newPermohonan);
-      alert(`Permohonan berhasil disimpan!\nID Akses Pemohon: ${newId}`);
+      alert(`Permohonan berhasil disimpan!\nID Akses Pemohon: ${permohonanId}`);
       navigate('/');
     } catch (error) {
       alert('Gagal menyimpan permohonan. Periksa koneksi atau konfigurasi Supabase.');
@@ -130,12 +134,19 @@ function PermohonanForm() {
           <textarea required className="form-input" rows="4" placeholder="Ringkasan isi surat permohonan..." value={formData.isiSurat} onChange={e => setFormData({...formData, isiSurat: e.target.value})}></textarea>
         </div>
 
-        <div className="form-group">
-          <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <LinkIcon size={16} /> Link Surat (G-Drive / Cloud)
-          </label>
-          <input required type="url" className="form-input" placeholder="https://..." value={formData.linkSurat} onChange={e => setFormData({...formData, linkSurat: e.target.value})} />
-        </div>
+        <DriveFileUpload
+          label="Dokumen Surat Permohonan (Google Drive)"
+          value={formData.linkSurat}
+          onChange={(url, meta) => {
+            setFormData({ ...formData, linkSurat: url });
+            if (meta?.folderUrl) setDriveFolderUrl(meta.folderUrl);
+          }}
+          permohonanId={permohonanId}
+          permohonanTitle={formData.perihal || formData.asalSurat}
+          folderCategory="surat_masuk"
+          required
+          helpText="Unggah scan surat permohonan resmi (.pdf, .docx, atau gambar)"
+        />
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2rem' }}>
           <button type="submit" className="btn btn-primary" style={{ padding: '1rem 2rem' }} disabled={isSubmitting}>
