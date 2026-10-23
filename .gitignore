@@ -13,6 +13,7 @@ dist-ssr
 *.local
 backups
 *.zip
+llm-wiki
 .env
 .env.*
 !.env.example
