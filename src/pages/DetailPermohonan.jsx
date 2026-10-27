@@ -5,6 +5,8 @@ import { getPermohonanById, updatePermohonan, deletePermohonan, getMasterJpnList
 import ReactMarkdown from 'react-markdown';
 import { downloadAnalysisAsDocx } from '../lib/docxGenerator';
 import DriveFileUpload from '../components/DriveFileUpload';
+import EarlyWarningChecklist from '../components/EarlyWarningChecklist';
+import { DEFAULT_EARLY_WARNING, calculateEarlyWarningRisk, EARLY_WARNING_INDICATORS } from '../lib/earlyWarning';
 
 function DetailPermohonan() {
   const { id } = useParams();
@@ -26,6 +28,7 @@ function DetailPermohonan() {
   const [isEditingAiResponse, setIsEditingAiResponse] = useState(false);
   const [adminRiskLevel, setAdminRiskLevel] = useState('low');
   const [adminRiskNotes, setAdminRiskNotes] = useState('');
+  const [adminEarlyWarning, setAdminEarlyWarning] = useState(DEFAULT_EARLY_WARNING);
   
   // -1 means assessing "Data Awal", 0+ means assessing a report index. null means closed.
   const [assessingReportIndex, setAssessingReportIndex] = useState(null);
@@ -495,6 +498,19 @@ ${isAset ? `- Nominal Aset Pulih Laporan Ini: Rp ${formatRupiah(report.nilaiDipu
         }
       }
 
+      // Sertakan Evaluasi Indikator Early Warning System (EWS) dari Admin JPN
+      const ewCalc = calculateEarlyWarningRisk(adminEarlyWarning);
+      const ewItemsText = EARLY_WARNING_INDICATORS.map(ind => {
+        const val = adminEarlyWarning[ind.id] === 'ya';
+        return `- ${ind.label}: ${val ? `YA (TERINDIKASI RISIKO - ${ind.dangerText})` : 'Tidak (Aman)'}`;
+      }).join('\n');
+
+      prompt += `\n\nHASIL EVALUASI INDIKATOR EARLY WARNING SYSTEM (EWS) OLEH TIM JPN:
+${ewItemsText}
+Kalkulasi Otomatis EWS: ${ewCalc.level === 'high' ? 'TINGGI' : ewCalc.level === 'medium' ? 'SEDANG' : 'RENDAH'} (${ewCalc.activeCount} dari ${EARLY_WARNING_INDICATORS.length} indikator aktif terdeteksi).
+
+Secara khusus, tolong berikan analisis hukum yuridis serta rekomendasi langkah konkret Jaksa Pengacara Negara (JPN) terhadap setiap indikator Early Warning yang berstatus YA (Terindikasi Risiko).`;
+
       prompt += `\n\nBerikan respons secara profesional, padat, dan langsung pada substansi hukum dan risiko proyek. Pertimbangkan apakah hambatan semakin memburuk, menetap, atau membaik dari laporan-laporan sebelumnya.`;
 
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
@@ -513,9 +529,19 @@ ${isAset ? `- Nominal Aset Pulih Laporan Ini: Rp ${formatRupiah(report.nilaiDipu
         setAiResponse(text);
         
         const lowerText = text.toLowerCase();
-        if (lowerText.includes('tinggi')) setAdminRiskLevel('high');
-        else if (lowerText.includes('sedang')) setAdminRiskLevel('medium');
-        else setAdminRiskLevel('low');
+        let aiLevel = 'low';
+        if (lowerText.includes('tinggi')) aiLevel = 'high';
+        else if (lowerText.includes('sedang')) aiLevel = 'medium';
+        else aiLevel = 'low';
+
+        // Jika EWS menghitung risiko tinggi, prioritaskan keamanan mitigasi
+        if (ewCalc.level === 'high' || aiLevel === 'high') {
+          setAdminRiskLevel('high');
+        } else if (ewCalc.level === 'medium' || aiLevel === 'medium') {
+          setAdminRiskLevel('medium');
+        } else {
+          setAdminRiskLevel('low');
+        }
       }
     } catch (err) {
       alert('Terjadi kesalahan jaringan atau API.');
@@ -535,11 +561,13 @@ ${isAset ? `- Nominal Aset Pulih Laporan Ini: Rp ${formatRupiah(report.nilaiDipu
         risk: adminRiskLevel,
         adminNotes: adminRiskNotes,
         saranDriveUrl: adminSaranDriveUrl,
+        earlyWarning: adminEarlyWarning,
       };
       newMonitoringData.aiAnalysis = aiResponse;
       newMonitoringData.risk = adminRiskLevel;
       newMonitoringData.adminNotes = adminRiskNotes;
       newMonitoringData.saranDriveUrl = adminSaranDriveUrl;
+      newMonitoringData.earlyWarning = adminEarlyWarning;
     } else {
       newMonitoringData.reports = [...(newMonitoringData.reports || [])];
       newMonitoringData.reports[targetIdx] = {
@@ -548,6 +576,7 @@ ${isAset ? `- Nominal Aset Pulih Laporan Ini: Rp ${formatRupiah(report.nilaiDipu
         risk: adminRiskLevel,
         adminNotes: adminRiskNotes,
         saranDriveUrl: adminSaranDriveUrl,
+        earlyWarning: adminEarlyWarning,
       };
     }
 
@@ -567,7 +596,7 @@ ${isAset ? `- Nominal Aset Pulih Laporan Ini: Rp ${formatRupiah(report.nilaiDipu
       monitoring: newMonitoringData
     });
     setMonitoringData(newMonitoringData);
-    alert('Penilaian Risiko Kejati berhasil disimpan!');
+    alert('Penilaian Risiko Kejati & Evaluasi EWS berhasil disimpan!');
   };
 
   const handleSelesai = async () => {
@@ -580,37 +609,68 @@ ${isAset ? `- Nominal Aset Pulih Laporan Ini: Rp ${formatRupiah(report.nilaiDipu
   const openAssessmentModal = (index) => {
     setAssessingReportIndex(index);
     if (index === -1) {
+      const initialEw = monitoringData?.initialData?.earlyWarning || monitoringData?.earlyWarning || DEFAULT_EARLY_WARNING;
+      setAdminEarlyWarning(initialEw);
       setAiResponse(monitoringData?.initialData?.aiAnalysis || monitoringData?.aiAnalysis || '');
-      setAdminRiskLevel(monitoringData?.initialData?.risk || monitoringData?.risk || 'low');
+      
+      const savedRisk = monitoringData?.initialData?.risk || monitoringData?.risk;
+      if (savedRisk) {
+        setAdminRiskLevel(savedRisk);
+      } else {
+        const calc = calculateEarlyWarningRisk(initialEw);
+        setAdminRiskLevel(calc.level);
+      }
+      
       setAdminRiskNotes(monitoringData?.initialData?.adminNotes || monitoringData?.adminNotes || '');
       setAdminSaranDriveUrl(monitoringData?.initialData?.saranDriveUrl || monitoringData?.saranDriveUrl || '');
     } else {
       const rep = (monitoringData?.reports || [])[index] || {};
+      const reportEw = rep.earlyWarning || DEFAULT_EARLY_WARNING;
+      setAdminEarlyWarning(reportEw);
       setAiResponse(rep.aiAnalysis || '');
-      setAdminRiskLevel(rep.risk || 'low');
+      
+      const savedRisk = rep.risk;
+      if (savedRisk) {
+        setAdminRiskLevel(savedRisk);
+      } else {
+        const calc = calculateEarlyWarningRisk(reportEw);
+        setAdminRiskLevel(calc.level);
+      }
+      
       setAdminRiskNotes(rep.adminNotes || '');
       setAdminSaranDriveUrl(rep.saranDriveUrl || '');
     }
   };
 
+  const handleEarlyWarningChange = (indicatorId, value) => {
+    setAdminEarlyWarning(prev => {
+      const nextEw = { ...prev, [indicatorId]: value };
+      const calc = calculateEarlyWarningRisk(nextEw);
+      // Radio button langsung mempengaruhi penilaian risiko JPN
+      setAdminRiskLevel(calc.level);
+      return nextEw;
+    });
+  };
+
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '2rem' }}>
+    <div className="detail-page-container">
 
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <Link to="/" className="btn btn-outline" style={{ padding: '0.5rem', borderRadius: '50%' }}>
-            <ArrowLeft size={24} />
+      <div className="detail-header-bar">
+        <div className="detail-header-left">
+          <Link to="/" className="btn btn-outline detail-back-btn" title="Kembali ke Dashboard">
+            <ArrowLeft size={20} />
           </Link>
 
-          <div>
-            <h1 style={{ margin: 0 }}>Detail Permohonan #{id}</h1>
-            <p style={{ color: 'var(--color-text-muted)', fontWeight: 700, margin: 0 }}>
-              {suratData.asalSurat} - {suratData.perihal}
+          <div className="detail-title-wrapper">
+            <h1 className="detail-page-title">Detail Permohonan #{id}</h1>
+            <p className="detail-page-subtitle">
+              {suratData.asalSurat && <strong style={{ color: 'var(--color-text-main)' }}>{suratData.asalSurat}</strong>}
+              {suratData.perihal && ` — ${suratData.perihal}`}
             </p>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div className="detail-header-actions">
           {suratData.driveFolderUrl && (
             <a
               href={suratData.driveFolderUrl}
@@ -618,23 +678,28 @@ ${isAset ? `- Nominal Aset Pulih Laporan Ini: Rp ${formatRupiah(report.nilaiDipu
               rel="noopener noreferrer"
               className="btn btn-outline"
               style={{
-                padding: '0.5rem 1rem',
+                padding: '0.45rem 0.85rem',
                 color: 'var(--color-primary-shadow)',
                 borderColor: 'var(--color-primary-shadow)',
-                textDecoration: 'none'
+                textDecoration: 'none',
+                fontSize: '0.88rem'
               }}
               title="Buka Folder Arsip Google Drive Kegiatan Ini"
             >
-              <Folder size={18} style={{ marginRight: '0.4rem' }} /> Folder Drive
+              <Folder size={16} style={{ marginRight: '0.35rem' }} /> Folder Drive
             </a>
           )}
-          <button className="btn btn-outline" style={{ padding: '0.5rem 1rem', color: 'var(--color-danger-shadow)', borderColor: 'var(--color-danger-shadow)' }} onClick={handleDelete}>
-            <Trash2 size={20} style={{ marginRight: '0.5rem' }} /> Hapus
+          <button
+            className="btn btn-outline"
+            style={{ padding: '0.45rem 0.85rem', color: 'var(--color-danger-shadow)', borderColor: 'var(--color-danger-shadow)', fontSize: '0.88rem' }}
+            onClick={handleDelete}
+          >
+            <Trash2 size={16} style={{ marginRight: '0.35rem' }} /> Hapus
           </button>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '2rem' }}>
+      <div className="detail-grid">
 
         {/* Left Column: Timeline */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -713,8 +778,8 @@ ${isAset ? `- Nominal Aset Pulih Laporan Ini: Rp ${formatRupiah(report.nilaiDipu
           <div className="card" style={{ padding: '1.5rem' }}>
             <h2 style={{ fontSize: '1.2rem', marginBottom: '1.5rem' }}>Tahapan Proses</h2>
 
-            {/* Horizontal Stepper */}
-            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+            {/* Stepper Grid (No Horizontal Overflow) */}
+            <div className="stepper-grid">
               {[1, 2, 3, 4].map(step => {
                 let title = '';
                 let isCompleted = currentStep > step;
@@ -738,20 +803,14 @@ ${isAset ? `- Nominal Aset Pulih Laporan Ini: Rp ${formatRupiah(report.nilaiDipu
                   <button 
                     key={step}
                     onClick={() => setActiveAccordionStep(step)}
-                    style={{
-                       flex: 1, minWidth: '100px',
-                       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem',
-                       padding: '0.75rem', borderRadius: 'var(--radius-md)',
-                       background: activeAccordionStep === step ? '#f0f7ff' : 'white',
-                       border: `2px solid ${activeAccordionStep === step ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                       cursor: 'pointer', textAlign: 'center',
-                       opacity: currentStep < step ? 0.5 : 1
-                    }}
+                    className={`stepper-step-btn ${activeAccordionStep === step ? 'active' : ''}`}
+                    style={{ opacity: currentStep < step ? 0.5 : 1 }}
+                    title={`Langkah ${step}: ${title}`}
                   >
-                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: bgColor, border: `2px solid ${borderColor}`, color: textColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.9rem' }}>
-                      {isCompleted ? <CheckCircle size={16} /> : step}
+                    <div className="stepper-circle" style={{ backgroundColor: bgColor, borderColor: borderColor, color: textColor }}>
+                      {isCompleted ? <CheckCircle size={14} /> : step}
                     </div>
-                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: activeAccordionStep === step ? 'var(--color-primary-shadow)' : 'var(--color-text-main)' }}>
+                    <span className="stepper-label" style={{ color: activeAccordionStep === step ? 'var(--color-primary-shadow)' : 'var(--color-text-main)' }}>
                       {title}
                     </span>
                   </button>
@@ -1221,15 +1280,15 @@ ${isAset ? `- Nominal Aset Pulih Laporan Ini: Rp ${formatRupiah(report.nilaiDipu
                   </h2>
                 </div>
                 <div className="table-container" style={{ border: 'none', borderRadius: 0 }}>
-                  <table className="table">
+                  <table className="table table-monev">
                     <thead>
                       <tr>
-                        <th>Tahap / Waktu</th>
-                        <th>Progres</th>
-                        {isInfrastruktur && <th>Realisasi Pencairan Anggaran</th>}
-                        <th>Hambatan / Catatan</th>
-                        <th>Status Risiko & Catatan Kejati</th>
-                        <th style={{ width: '130px' }}>Aksi</th>
+                        <th style={{ minWidth: '110px' }}>Tahap / Waktu</th>
+                        <th style={{ minWidth: '130px' }}>Progres</th>
+                        {isInfrastruktur && <th style={{ minWidth: '220px' }}>Realisasi Pencairan Anggaran</th>}
+                        <th style={{ minWidth: '180px' }}>Hambatan / Catatan</th>
+                        <th style={{ minWidth: '160px' }}>Status Risiko & Catatan Kejati</th>
+                        <th className="table-action-cell" style={{ minWidth: '120px' }}>Aksi</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1289,6 +1348,29 @@ ${isAset ? `- Nominal Aset Pulih Laporan Ini: Rp ${formatRupiah(report.nilaiDipu
                               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600, backgroundColor: (monitoringData.initialData?.risk || monitoringData.risk) === 'high' ? '#ffe2e2' : (monitoringData.initialData?.risk || monitoringData.risk) === 'medium' ? '#fff5cc' : '#e5f9d6', color: (monitoringData.initialData?.risk || monitoringData.risk) === 'high' ? 'var(--color-danger)' : (monitoringData.initialData?.risk || monitoringData.risk) === 'medium' ? '#d4ac0d' : 'var(--color-primary-shadow)' }}>
                                 {(monitoringData.initialData?.risk || monitoringData.risk) === 'high' ? 'Tinggi' : (monitoringData.initialData?.risk || monitoringData.risk) === 'medium' ? 'Sedang' : 'Rendah'}
                               </div>
+                              {(() => {
+                                const ew = monitoringData.initialData?.earlyWarning || monitoringData.earlyWarning;
+                                if (!ew) return null;
+                                const ewCalc = calculateEarlyWarningRisk(ew);
+                                return (
+                                  <div style={{ marginTop: '0.3rem' }}>
+                                    <span style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '0.25rem',
+                                      fontSize: '0.72rem',
+                                      fontWeight: 700,
+                                      padding: '0.15rem 0.45rem',
+                                      borderRadius: '4px',
+                                      background: ewCalc.activeCount > 0 ? '#fff7ed' : '#f0fdf4',
+                                      color: ewCalc.activeCount > 0 ? '#c2410c' : '#15803d',
+                                      border: `1px solid ${ewCalc.activeCount > 0 ? '#fdba74' : '#bbf7d0'}`
+                                    }}>
+                                      <AlertTriangle size={11} /> {ewCalc.activeCount > 0 ? `${ewCalc.activeCount} Peringatan EWS` : 'EWS Normal'}
+                                    </span>
+                                  </div>
+                                );
+                              })()}
                               {(monitoringData.initialData?.adminNotes || monitoringData.adminNotes) && (
                                 <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: '0.35rem' }}>
                                   {monitoringData.initialData?.adminNotes || monitoringData.adminNotes}
@@ -1306,13 +1388,21 @@ ${isAset ? `- Nominal Aset Pulih Laporan Ini: Rp ${formatRupiah(report.nilaiDipu
                             <span style={{ color: '#e67e22', fontStyle: 'italic', fontSize: '0.85rem', fontWeight: 600 }}>Belum Dinilai</span>
                           )}
                         </td>
-                        <td>
+                        <td className="table-action-cell">
                           {monitoringData.initialData?.risk || monitoringData.risk ? (
-                            <button className="btn btn-outline" style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem', width: '100%', display: 'flex', justifyContent: 'center', gap: '0.25rem' }} onClick={() => openAssessmentModal(-1)}>
+                            <button
+                              className="btn btn-outline"
+                              style={{ padding: '0.45rem 0.75rem', fontSize: '0.82rem', width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', whiteSpace: 'nowrap' }}
+                              onClick={() => openAssessmentModal(-1)}
+                            >
                               <ShieldAlert size={14} /> Detail
                             </button>
                           ) : (
-                            <button className="btn btn-primary" style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem', width: '100%', display: 'flex', justifyContent: 'center', gap: '0.25rem', background: '#8e44ad', borderColor: '#732d91' }} onClick={() => openAssessmentModal(-1)}>
+                            <button
+                              className="btn btn-primary"
+                              style={{ padding: '0.45rem 0.75rem', fontSize: '0.82rem', width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', whiteSpace: 'nowrap', background: '#8e44ad', borderColor: '#732d91' }}
+                              onClick={() => openAssessmentModal(-1)}
+                            >
                               <Sparkles size={14} /> Beri Penilaian
                             </button>
                           )}
@@ -1385,6 +1475,27 @@ ${isAset ? `- Nominal Aset Pulih Laporan Ini: Rp ${formatRupiah(report.nilaiDipu
                                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600, backgroundColor: rep.risk === 'high' ? '#ffe2e2' : rep.risk === 'medium' ? '#fff5cc' : '#e5f9d6', color: rep.risk === 'high' ? 'var(--color-danger)' : rep.risk === 'medium' ? '#d4ac0d' : 'var(--color-primary-shadow)' }}>
                                   {rep.risk === 'high' ? 'Tinggi' : rep.risk === 'medium' ? 'Sedang' : 'Rendah'}
                                 </div>
+                                {rep.earlyWarning && (() => {
+                                  const ewCalc = calculateEarlyWarningRisk(rep.earlyWarning);
+                                  return (
+                                    <div style={{ marginTop: '0.3rem' }}>
+                                      <span style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '0.25rem',
+                                        fontSize: '0.72rem',
+                                        fontWeight: 700,
+                                        padding: '0.15rem 0.45rem',
+                                        borderRadius: '4px',
+                                        background: ewCalc.activeCount > 0 ? '#fff7ed' : '#f0fdf4',
+                                        color: ewCalc.activeCount > 0 ? '#c2410c' : '#15803d',
+                                        border: `1px solid ${ewCalc.activeCount > 0 ? '#fdba74' : '#bbf7d0'}`
+                                      }}>
+                                        <AlertTriangle size={11} /> {ewCalc.activeCount > 0 ? `${ewCalc.activeCount} Peringatan EWS` : 'EWS Normal'}
+                                      </span>
+                                    </div>
+                                  );
+                                })()}
                                 {rep.adminNotes && (
                                   <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: '0.35rem' }}>{rep.adminNotes}</div>
                                 )}
@@ -1400,13 +1511,21 @@ ${isAset ? `- Nominal Aset Pulih Laporan Ini: Rp ${formatRupiah(report.nilaiDipu
                               <span style={{ color: '#e67e22', fontStyle: 'italic', fontSize: '0.85rem', fontWeight: 600 }}>Belum Dinilai</span>
                             )}
                           </td>
-                          <td>
+                          <td className="table-action-cell">
                             {rep.risk ? (
-                              <button className="btn btn-outline" style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem', width: '100%', display: 'flex', justifyContent: 'center', gap: '0.25rem' }} onClick={() => openAssessmentModal(idx)}>
+                              <button
+                                className="btn btn-outline"
+                                style={{ padding: '0.45rem 0.75rem', fontSize: '0.82rem', width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', whiteSpace: 'nowrap' }}
+                                onClick={() => openAssessmentModal(idx)}
+                              >
                                 <ShieldAlert size={14} /> Detail
                               </button>
                             ) : (
-                              <button className="btn btn-primary" style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem', width: '100%', display: 'flex', justifyContent: 'center', gap: '0.25rem', background: '#8e44ad', borderColor: '#732d91' }} onClick={() => openAssessmentModal(idx)}>
+                              <button
+                                className="btn btn-primary"
+                                style={{ padding: '0.45rem 0.75rem', fontSize: '0.82rem', width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', whiteSpace: 'nowrap', background: '#8e44ad', borderColor: '#732d91' }}
+                                onClick={() => openAssessmentModal(idx)}
+                              >
                                 <Sparkles size={14} /> Beri Penilaian
                               </button>
                             )}
@@ -1446,8 +1565,9 @@ ${isAset ? `- Nominal Aset Pulih Laporan Ini: Rp ${formatRupiah(report.nilaiDipu
                                   nilaiAnggaran: formatCurrency(monitoringData?.nilai || 0),
                                   realisasiPencairan: formatCurrency(dis.tahap),
                                   persentasePencairan: dis.persenKumulatif,
-                                  progresFisik: `${monitoringData?.initialData?.progressKegiatan || monitoringData?.progressKegiatan || '-'} (${monitoringData?.initialData?.persentaseKegiatan || monitoringData?.persentaseKegiatan || '0%'})`
-                                } : {};
+                                  progresFisik: `${monitoringData?.initialData?.progressKegiatan || monitoringData?.progressKegiatan || '-'} (${monitoringData?.initialData?.persentaseKegiatan || monitoringData?.persentaseKegiatan || '0%'})`,
+                                  earlyWarning: adminEarlyWarning,
+                                } : { earlyWarning: adminEarlyWarning };
                                 downloadAnalysisAsDocx(monitoringData?.kegiatan || id, monitoringData?.kegiatan, aiResponse, 'Data Awal', extra);
                               }}
                             >
@@ -1488,19 +1608,70 @@ ${isAset ? `- Nominal Aset Pulih Laporan Ini: Rp ${formatRupiah(report.nilaiDipu
                     )}
                   </div>
 
+                  {/* Modul 02: Early Warning System (EWS) dengan Radio Button */}
+                  <EarlyWarningChecklist
+                    values={adminEarlyWarning}
+                    onChange={handleEarlyWarningChange}
+                    readOnly={false}
+                  />
+
                   {/* Form Penentuan Risiko */}
                   <div style={{ background: 'white', border: '1px solid #d7bde2', padding: '1.25rem', borderRadius: '8px' }}>
-                    <h4 style={{ margin: '0 0 1rem 0', fontSize: '1.05rem', color: 'var(--color-text-main)' }}>
-                      Penentuan Tingkat Risiko & Instruksi Mitigasi
+                    <h4 style={{ margin: '0 0 1rem 0', fontSize: '1.05rem', color: 'var(--color-text-main)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <span>Penentuan Tingkat Risiko & Instruksi Mitigasi</span>
+                      {(() => {
+                        const ewCalc = calculateEarlyWarningRisk(adminEarlyWarning);
+                        return (
+                          <span style={{
+                            fontSize: '0.78rem',
+                            padding: '0.2rem 0.6rem',
+                            borderRadius: '20px',
+                            background: ewCalc.level === 'high' ? '#fee2e2' : ewCalc.level === 'medium' ? '#fef3c7' : '#dcfce7',
+                            color: ewCalc.level === 'high' ? '#b91c1c' : ewCalc.level === 'medium' ? '#b45309' : '#15803d',
+                            fontWeight: 700,
+                            border: `1px solid ${ewCalc.level === 'high' ? '#fca5a5' : ewCalc.level === 'medium' ? '#fde68a' : '#86efac'}`,
+                          }}>
+                            Rekomendasi EWS: {ewCalc.level === 'high' ? 'TINGGI' : ewCalc.level === 'medium' ? 'SEDANG' : 'RENDAH'}
+                          </span>
+                        );
+                      })()}
                     </h4>
 
                     <div style={{ marginBottom: '1rem' }}>
-                      <label className="form-label" style={{ fontWeight: 600 }}>Tingkat Risiko Final</label>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                        <label className="form-label" style={{ fontWeight: 600, margin: 0 }}>Tingkat Risiko Final</label>
+                        {(() => {
+                          const ewCalc = calculateEarlyWarningRisk(adminEarlyWarning);
+                          const isSynced = adminRiskLevel === ewCalc.level;
+                          return !isSynced ? (
+                            <button
+                              type="button"
+                              onClick={() => setAdminRiskLevel(ewCalc.level)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: 'var(--color-primary)',
+                                fontSize: '0.78rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                textDecoration: 'underline',
+                              }}
+                            >
+                              Sinkronkan dengan EWS ({ewCalc.level.toUpperCase()})
+                            </button>
+                          ) : (
+                            <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: 600 }}>✓ Selaras dengan EWS</span>
+                          );
+                        })()}
+                      </div>
                       <select className="form-input" value={adminRiskLevel} onChange={e => setAdminRiskLevel(e.target.value)}>
                         <option value="low">🟢 Rendah (Aman / Proyek Berjalan Normal)</option>
                         <option value="medium">🟡 Sedang (Perlu Perhatian & Monitoring Ketat)</option>
                         <option value="high">🔴 Tinggi (Kritis / Perlu Tindakan Mitigasi Segera)</option>
                       </select>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'block', marginTop: '0.3rem' }}>
+                        *Tingkat risiko otomatis disesuaikan berdasarkan radio button indikator Early Warning di atas, namun admin tetap dapat menyesuaikan sesuai diskresi JPN.
+                      </span>
                     </div>
 
                     <div style={{ marginBottom: '1.25rem' }}>
@@ -1666,8 +1837,9 @@ ${isAset ? `- Nominal Aset Pulih Laporan Ini: Rp ${formatRupiah(report.nilaiDipu
                               nilaiAnggaran: formatCurrency(monitoringData?.nilai || 0),
                               realisasiPencairan: formatCurrency(dis.tahap),
                               persentasePencairan: dis.persenKumulatif,
-                              progresFisik: `${rep?.progressKegiatan || '-'} (${rep?.persentaseKegiatan || '0%'})`
-                            } : {};
+                              progresFisik: `${rep?.progressKegiatan || '-'} (${rep?.persentaseKegiatan || '0%'})`,
+                              earlyWarning: adminEarlyWarning,
+                            } : { earlyWarning: adminEarlyWarning };
                             downloadAnalysisAsDocx(monitoringData?.kegiatan || id, monitoringData?.kegiatan, aiResponse, label, extra);
                           }}
                         >
@@ -1705,16 +1877,69 @@ ${isAset ? `- Nominal Aset Pulih Laporan Ini: Rp ${formatRupiah(report.nilaiDipu
                 )}
               </div>
 
+              {/* Modul 02: Early Warning System (EWS) dengan Radio Button */}
+              <EarlyWarningChecklist
+                values={adminEarlyWarning}
+                onChange={handleEarlyWarningChange}
+                readOnly={false}
+              />
+
               <div style={{ background: 'var(--color-surface)', border: '2px solid var(--color-border)', padding: '1.5rem', borderRadius: '8px' }}>
-                <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.2rem' }}>Penentuan Risiko & Instruksi (Oleh Admin)</h3>
+                <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <span>Penentuan Risiko & Instruksi (Oleh Admin JPN)</span>
+                  {(() => {
+                    const ewCalc = calculateEarlyWarningRisk(adminEarlyWarning);
+                    return (
+                      <span style={{
+                        fontSize: '0.78rem',
+                        padding: '0.2rem 0.6rem',
+                        borderRadius: '20px',
+                        background: ewCalc.level === 'high' ? '#fee2e2' : ewCalc.level === 'medium' ? '#fef3c7' : '#dcfce7',
+                        color: ewCalc.level === 'high' ? '#b91c1c' : ewCalc.level === 'medium' ? '#b45309' : '#15803d',
+                        fontWeight: 700,
+                        border: `1px solid ${ewCalc.level === 'high' ? '#fca5a5' : ewCalc.level === 'medium' ? '#fde68a' : '#86efac'}`,
+                      }}>
+                        Rekomendasi EWS: {ewCalc.level === 'high' ? 'TINGGI' : ewCalc.level === 'medium' ? 'SEDANG' : 'RENDAH'}
+                      </span>
+                    );
+                  })()}
+                </h3>
                 
-                <div style={{ marginBottom: '1rem' }}>
-                  <label className="form-label" style={{ fontWeight: 600 }}>Tingkat Risiko Final</label>
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                    <label className="form-label" style={{ fontWeight: 600, margin: 0 }}>Tingkat Risiko Final</label>
+                    {(() => {
+                      const ewCalc = calculateEarlyWarningRisk(adminEarlyWarning);
+                      const isSynced = adminRiskLevel === ewCalc.level;
+                      return !isSynced ? (
+                        <button
+                          type="button"
+                          onClick={() => setAdminRiskLevel(ewCalc.level)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: 'var(--color-primary)',
+                            fontSize: '0.78rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            textDecoration: 'underline',
+                          }}
+                        >
+                          Sinkronkan dengan EWS ({ewCalc.level.toUpperCase()})
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: 600 }}>✓ Selaras dengan EWS</span>
+                      );
+                    })()}
+                  </div>
                   <select className="form-input" value={adminRiskLevel} onChange={e => setAdminRiskLevel(e.target.value)}>
                     <option value="low">Rendah (Aman)</option>
                     <option value="medium">Sedang (Perlu Perhatian)</option>
                     <option value="high">Tinggi (Kritis / Perlu Mitigasi Segera)</option>
                   </select>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'block', marginTop: '0.3rem' }}>
+                    *Tingkat risiko otomatis disesuaikan berdasarkan radio button indikator Early Warning di atas, namun admin tetap dapat menyesuaikan sesuai diskresi JPN.
+                  </span>
                 </div>
 
                 <div style={{ marginBottom: '1rem' }}>

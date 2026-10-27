@@ -53,6 +53,16 @@ const INITIAL_MOCK_DATA = [
       solusi: 'Koordinasi terpadu lintas instansi bersama Pemkot Kupang, PDAM, dan PLN.',
       risk: 'medium',
       adminNotes: 'Tim JPN merekomendasikan percepatan adendum utilitas dan memastikan jaminan uang muka rekanan tetap aktif.',
+      earlyWarning: {
+        dokumenBelumLengkap: 'tidak',
+        kontrakMendekatiBerakhir: 'ya',
+        keterlambatan: 'ya',
+        perubahanRegulasi: 'tidak',
+        rekomendasiBelumDitindaklanjuti: 'tidak',
+        potensiSengketa: 'tidak',
+        deviasiKontrak: 'tidak',
+        kenaikanLevelRisiko: 'ya'
+      },
       linkSaranPdf: 'https://drive.google.com/file/d/1demo-surat-saran-jpn/preview',
       aiAnalysis: '### Telaahan Yuridis Terintegrasi (AI Gemini - JPN)\n\n**1. Aspek Legalitas Kontrak & Prosedur:**\nPelaksanaan kontrak telah memenuhi ketentuan Perpres Pengadaan Barang/Jasa Pemerintah. Perlu diperhatikan batas akhir masa pelaksanaan kontrak pada Desember 2026.\n\n**2. Evaluasi Deviasi Fisik vs Keuangan:**\nCapaian fisik (58%) berada seimbang dengan realisasi keuangan kumulatif (60%). Rasio deviasi sebesar -2% tergolong dalam batas toleransi wajar (Deviasi Normal). Pembayaran termin telah berbasis Berita Acara MC Konsultan Pengawas.\n\n**3. Mitigasi Risiko Preventif:**\n- Pastikan jaminan pelaksanaan (Performance Bond) dan jaminan uang muka diperpanjang sebelum masa berlakunya berakhir.\n- Pengawasan ketat terhadap uji mutu beton dan pembebanan struktur jembatan.',
       initialData: {
@@ -61,7 +71,17 @@ const INITIAL_MOCK_DATA = [
         realisasiPencairan: 9000000000,
         persentasePencairan: '20.0%',
         kasusPosisi: 'Proyek pembangunan jembatan kembar Liliba dengan bentang 140 meter menghubungkan wilayah Oebobo dan Maulafa Kota Kupang.',
-        hambatan: 'Relokasi utilitas pipa PDAM dan jaringan listrik PLN.'
+        hambatan: 'Relokasi utilitas pipa PDAM dan jaringan listrik PLN.',
+        earlyWarning: {
+          dokumenBelumLengkap: 'tidak',
+          kontrakMendekatiBerakhir: 'tidak',
+          keterlambatan: 'tidak',
+          perubahanRegulasi: 'tidak',
+          rekomendasiBelumDitindaklanjuti: 'tidak',
+          potensiSengketa: 'tidak',
+          deviasiKontrak: 'tidak',
+          kenaikanLevelRisiko: 'tidak'
+        }
       },
       reports: [
         {
@@ -73,7 +93,19 @@ const INITIAL_MOCK_DATA = [
           persentaseKumulatif: '40.0%',
           hambatan: 'Tahap pemancangan tiang pancang pilar tengah jembatan.',
           solusi: 'Pengerahan alat berat crane tambahan untuk percepatan.',
-          linkDokumen: 'https://drive.google.com/file/d/1demo-laporan-1/preview'
+          linkDokumen: 'https://drive.google.com/file/d/1demo-laporan-1/preview',
+          risk: 'low',
+          adminNotes: 'Pekerjaan pondasi pilar awal berjalan sesuai spesifikasi teknis dan Kurva S.',
+          earlyWarning: {
+            dokumenBelumLengkap: 'tidak',
+            kontrakMendekatiBerakhir: 'tidak',
+            keterlambatan: 'tidak',
+            perubahanRegulasi: 'tidak',
+            rekomendasiBelumDitindaklanjuti: 'tidak',
+            potensiSengketa: 'tidak',
+            deviasiKontrak: 'tidak',
+            kenaikanLevelRisiko: 'tidak'
+          }
         },
         {
           tanggal: '2026-09-10',
@@ -84,7 +116,19 @@ const INITIAL_MOCK_DATA = [
           persentaseKumulatif: '60.0%',
           hambatan: 'Pengecoran gelagar utama geladak jembatan bentang kedua.',
           solusi: 'Pemberlakuan shift malam dan penyesuaian rekayasa lalu lintas.',
-          linkDokumen: 'https://drive.google.com/file/d/1demo-laporan-2/preview'
+          linkDokumen: 'https://drive.google.com/file/d/1demo-laporan-2/preview',
+          risk: 'medium',
+          adminNotes: 'Tim JPN merekomendasikan percepatan adendum utilitas dan memastikan jaminan uang muka rekanan tetap aktif.',
+          earlyWarning: {
+            dokumenBelumLengkap: 'tidak',
+            kontrakMendekatiBerakhir: 'ya',
+            keterlambatan: 'ya',
+            perubahanRegulasi: 'tidak',
+            rekomendasiBelumDitindaklanjuti: 'tidak',
+            potensiSengketa: 'tidak',
+            deviasiKontrak: 'tidak',
+            kenaikanLevelRisiko: 'ya'
+          }
         }
       ]
     }

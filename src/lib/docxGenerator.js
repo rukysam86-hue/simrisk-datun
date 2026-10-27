@@ -13,6 +13,7 @@ import {
   ShadingType,
 } from 'docx';
 import { saveAs } from 'file-saver';
+import { calculateEarlyWarningRisk } from './earlyWarning';
 
 /**
  * Parses markdown text into docx Paragraph objects.
@@ -223,6 +224,57 @@ export async function downloadAnalysisAsDocx(title, projectName, markdownText, r
           }),
           new TableCell({
             children: [new Paragraph({ text: extraInfo.progresFisik })],
+          }),
+        ],
+      })
+    );
+  }
+
+  if (extraInfo.earlyWarning) {
+    const calc = calculateEarlyWarningRisk(extraInfo.earlyWarning);
+    const ewsLabel = calc.level === 'high' ? 'TINGGI (KRITIS)' : calc.level === 'medium' ? 'SEDANG (PERHATIAN)' : 'RENDAH (AMAN)';
+    const ewsColor = calc.level === 'high' ? 'C0392B' : calc.level === 'medium' ? 'D35400' : '27AE60';
+
+    const detailParagraphs = [
+      new Paragraph({
+        children: [
+          new TextRun({ text: `${ewsLabel} — Skor: ${calc.score} (${calc.activeCount} Indikator Terindikasi)`, bold: true, color: ewsColor }),
+        ],
+      }),
+    ];
+
+    if (calc.activeItems.length > 0) {
+      calc.activeItems.forEach(item => {
+        detailParagraphs.push(
+          new Paragraph({
+            children: [
+              new TextRun({ text: `• ${item.label}: `, bold: true, size: 18, color: '333333' }),
+              new TextRun({ text: item.dangerText, italics: true, size: 18, color: '555555' }),
+            ],
+            spacing: { before: 40 },
+          })
+        );
+      });
+    } else {
+      detailParagraphs.push(
+        new Paragraph({
+          children: [
+            new TextRun({ text: 'Seluruh indikator Early Warning dinyatakan aman dan terkendali.', italics: true, size: 18, color: '666666' }),
+          ],
+          spacing: { before: 40 },
+        })
+      );
+    }
+
+    infoRows.push(
+      new TableRow({
+        children: [
+          new TableCell({
+            children: [new Paragraph({ children: [new TextRun({ text: 'Indikator EWS JPN', bold: true })] })],
+            shading: { type: ShadingType.CLEAR, color: 'E8F4FD', fill: 'E8F4FD' },
+          }),
+          new TableCell({
+            children: detailParagraphs,
           }),
         ],
       })

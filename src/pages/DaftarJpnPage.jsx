@@ -96,10 +96,10 @@ export default function DaftarJpnPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h1 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '2.1rem' }}>
-            <Users size={32} color="var(--color-primary-shadow)" />
+            <Users size={32} color="var(--color-primary)" />
             Daftar Jaksa Pengacara Negara (JPN)
           </h1>
-          <p style={{ color: 'var(--color-text-muted)', fontWeight: 700, margin: '0.5rem 0 0 0' }}>
+          <p style={{ color: 'var(--color-text-muted)', fontWeight: 600, margin: '0.5rem 0 0 0' }}>
             Kejaksaan Tinggi Nusa Tenggara Timur • Personil terdaftar akan otomatis terisi saat penugasan SP-1 & SP-2
           </p>
         </div>
@@ -161,7 +161,7 @@ export default function DaftarJpnPage() {
       </div>
 
       {/* Search Input Bar */}
-      <div className="card" style={{ padding: '1rem 1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+      <div className="card" style={{ padding: '0.75rem 1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
         <Search size={20} color="var(--color-text-muted)" />
         <input
           type="text"
@@ -190,7 +190,7 @@ export default function DaftarJpnPage() {
       {/* Table of JPN */}
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+          <table className="table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
               <tr style={{ backgroundColor: 'var(--color-surface)', borderBottom: '2px solid var(--color-border)' }}>
                 <th style={{ padding: '1rem 1.25rem', fontWeight: 800, width: '50px' }}>No</th>
@@ -261,7 +261,7 @@ export default function DaftarJpnPage() {
                         </button>
                         <button
                           className="btn btn-outline"
-                          style={{ padding: '0.4rem 0.55rem', borderRadius: '8px', color: 'var(--color-danger-shadow)', borderColor: 'var(--color-danger-shadow)' }}
+                          style={{ padding: '0.4rem 0.55rem', borderRadius: '8px', color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }}
                           onClick={() => handleDelete(jpn.id, jpn.nama)}
                           title="Hapus JPN"
                         >
@@ -285,7 +285,8 @@ export default function DaftarJpnPage() {
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(3px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -295,7 +296,7 @@ export default function DaftarJpnPage() {
           <div className="card" style={{ width: '100%', maxWidth: '540px', margin: 0, padding: '1.75rem', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '2px solid var(--color-border)', paddingBottom: '0.75rem' }}>
               <h2 style={{ margin: 0, fontSize: '1.3rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Users size={22} color="var(--color-primary-shadow)" />
+                <Users size={22} color="var(--color-primary)" />
                 {editingId ? 'Edit Data JPN' : 'Tambah JPN Baru'}
               </h2>
               <button

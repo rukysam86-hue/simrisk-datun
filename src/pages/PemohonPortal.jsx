@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Lock, Send, Clock, Activity, FileText, Plus, X, ShieldAlert, DollarSign, Folder } from 'lucide-react';
+import { Lock, Send, Clock, Activity, FileText, Plus, X, ShieldAlert, DollarSign, Folder, AlertTriangle } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { getPermohonanById, updatePermohonan } from '../data/store';
 import ReactMarkdown from 'react-markdown';
 import WysiwygEditor from '../lib/WysiwygEditor';
 import DriveFileUpload from '../components/DriveFileUpload';
+import EarlyWarningChecklist from '../components/EarlyWarningChecklist';
+import { calculateEarlyWarningRisk } from '../lib/earlyWarning';
 
 function PemohonPortal() {
   const { linkId } = useParams();
@@ -867,9 +869,34 @@ function PemohonPortal() {
                       </td>
                       <td>
                         {projectData.monitoring.risk && (
-                           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600, backgroundColor: projectData.monitoring.risk === 'high' ? '#ffe2e2' : projectData.monitoring.risk === 'medium' ? '#fff5cc' : '#e5f9d6', color: projectData.monitoring.risk === 'high' ? 'var(--color-danger)' : projectData.monitoring.risk === 'medium' ? '#d4ac0d' : 'var(--color-primary-shadow)' }}>
-                              {projectData.monitoring.risk === 'high' ? 'Tinggi' : projectData.monitoring.risk === 'medium' ? 'Sedang' : 'Rendah'}
-                           </div>
+                          <div>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600, backgroundColor: projectData.monitoring.risk === 'high' ? '#ffe2e2' : projectData.monitoring.risk === 'medium' ? '#fff5cc' : '#e5f9d6', color: projectData.monitoring.risk === 'high' ? 'var(--color-danger)' : projectData.monitoring.risk === 'medium' ? '#d4ac0d' : 'var(--color-primary-shadow)' }}>
+                               {projectData.monitoring.risk === 'high' ? 'Tinggi' : projectData.monitoring.risk === 'medium' ? 'Sedang' : 'Rendah'}
+                            </div>
+                            {(() => {
+                              const ew = projectData.monitoring.initialData?.earlyWarning || projectData.monitoring.earlyWarning;
+                              if (!ew) return null;
+                              const ewCalc = calculateEarlyWarningRisk(ew);
+                              return (
+                                <div style={{ marginTop: '0.3rem' }}>
+                                  <span style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.25rem',
+                                    fontSize: '0.72rem',
+                                    fontWeight: 700,
+                                    padding: '0.15rem 0.45rem',
+                                    borderRadius: '4px',
+                                    background: ewCalc.activeCount > 0 ? '#fff7ed' : '#f0fdf4',
+                                    color: ewCalc.activeCount > 0 ? '#c2410c' : '#15803d',
+                                    border: `1px solid ${ewCalc.activeCount > 0 ? '#fdba74' : '#bbf7d0'}`
+                                  }}>
+                                    <AlertTriangle size={11} /> {ewCalc.activeCount > 0 ? `${ewCalc.activeCount} Peringatan EWS` : 'EWS Normal'}
+                                  </span>
+                                </div>
+                              );
+                            })()}
+                          </div>
                         )}
                         {projectData.monitoring.adminNotes && (
                            <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: '0.5rem' }}>{projectData.monitoring.adminNotes}</div>
@@ -964,6 +991,27 @@ function PemohonPortal() {
                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600, backgroundColor: rep.risk === 'high' ? '#ffe2e2' : rep.risk === 'medium' ? '#fff5cc' : '#e5f9d6', color: rep.risk === 'high' ? 'var(--color-danger)' : rep.risk === 'medium' ? '#d4ac0d' : 'var(--color-primary-shadow)' }}>
                                   {rep.risk === 'high' ? 'Tinggi' : rep.risk === 'medium' ? 'Sedang' : 'Rendah'}
                                </div>
+                               {rep.earlyWarning && (() => {
+                                 const ewCalc = calculateEarlyWarningRisk(rep.earlyWarning);
+                                 return (
+                                   <div style={{ marginTop: '0.3rem' }}>
+                                     <span style={{
+                                       display: 'inline-flex',
+                                       alignItems: 'center',
+                                       gap: '0.25rem',
+                                       fontSize: '0.72rem',
+                                       fontWeight: 700,
+                                       padding: '0.15rem 0.45rem',
+                                       borderRadius: '4px',
+                                       background: ewCalc.activeCount > 0 ? '#fff7ed' : '#f0fdf4',
+                                       color: ewCalc.activeCount > 0 ? '#c2410c' : '#15803d',
+                                       border: `1px solid ${ewCalc.activeCount > 0 ? '#fdba74' : '#bbf7d0'}`
+                                     }}>
+                                       <AlertTriangle size={11} /> {ewCalc.activeCount > 0 ? `${ewCalc.activeCount} Peringatan EWS` : 'EWS Normal'}
+                                     </span>
+                                   </div>
+                                 );
+                               })()}
                                {rep.adminNotes && (
                                   <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: '0.5rem' }}>{rep.adminNotes}</div>
                                )}
@@ -1082,8 +1130,34 @@ function PemohonPortal() {
                 </div>
               </div>
 
+              {/* Modul 02: Early Warning System (EWS) dari Tim JPN */}
+              {targetData?.earlyWarning && (
+                <EarlyWarningChecklist
+                  values={targetData.earlyWarning}
+                  readOnly={true}
+                />
+              )}
+
               <div style={{ background: 'var(--color-surface)', border: '2px solid var(--color-border)', padding: '1.5rem', borderRadius: '8px' }}>
-                <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.2rem' }}>Penentuan Risiko & Catatan (Oleh Admin)</h3>
+                <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <span>Penentuan Risiko & Catatan (Oleh Tim JPN)</span>
+                  {targetData?.earlyWarning && (() => {
+                    const ewCalc = calculateEarlyWarningRisk(targetData.earlyWarning);
+                    return (
+                      <span style={{
+                        fontSize: '0.78rem',
+                        padding: '0.2rem 0.6rem',
+                        borderRadius: '20px',
+                        background: ewCalc.level === 'high' ? '#fee2e2' : ewCalc.level === 'medium' ? '#fef3c7' : '#dcfce7',
+                        color: ewCalc.level === 'high' ? '#b91c1c' : ewCalc.level === 'medium' ? '#b45309' : '#15803d',
+                        fontWeight: 700,
+                        border: `1px solid ${ewCalc.level === 'high' ? '#fca5a5' : ewCalc.level === 'medium' ? '#fde68a' : '#86efac'}`,
+                      }}>
+                        Evaluasi EWS: {ewCalc.level === 'high' ? 'TINGGI' : ewCalc.level === 'medium' ? 'SEDANG' : 'RENDAH'} ({ewCalc.activeCount} Peringatan)
+                      </span>
+                    );
+                  })()}
+                </h3>
                 
                 <div style={{ marginBottom: '1rem' }}>
                   <span style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', fontWeight: 700, display: 'block', marginBottom: '0.5rem' }}>Tingkat Risiko Final:</span>

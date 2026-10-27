@@ -189,38 +189,38 @@ function PermohonanForm() {
       </p>
 
       <form className="card" onSubmit={handleSubmit}>
-        <h2 style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem', color: 'var(--color-secondary-shadow)' }}>
+        <h2 style={{ fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.5rem', color: 'var(--color-primary)' }}>
           <Mail size={24} />
           Data Surat Permohonan
         </h2>
 
         {/* Kategori Permohonan */}
         <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-          <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, marginBottom: '0.75rem' }}>
+          <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, marginBottom: '0.75rem' }}>
             <FileText size={16} /> Kategori Permohonan
           </label>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', cursor: 'pointer', padding: '0.4rem 0' }}>
               <input 
                 type="radio" 
                 name="kategoriPermohonan" 
                 value="Pendampingan Pemulihan/Penyelamatan Aset" 
                 checked={formData.kategoriPermohonan === 'Pendampingan Pemulihan/Penyelamatan Aset'}
                 onChange={e => setFormData({...formData, kategoriPermohonan: e.target.value})}
-                style={{ width: '1.2rem', height: '1.2rem', accentColor: 'var(--color-primary-shadow)' }}
+                style={{ width: '1.25rem', height: '1.25rem', accentColor: 'var(--color-primary)' }}
               />
-              <span style={{ fontSize: '0.95rem', color: 'var(--color-text-main)' }}>Pendampingan Pemulihan/Penyelamatan Aset</span>
+              <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--color-text-main)' }}>Pendampingan Pemulihan/Penyelamatan Aset</span>
             </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', cursor: 'pointer', padding: '0.4rem 0' }}>
               <input 
                 type="radio" 
                 name="kategoriPermohonan" 
                 value="Pendampingan Hukum Proyek Infrastruktur" 
                 checked={formData.kategoriPermohonan === 'Pendampingan Hukum Proyek Infrastruktur'}
                 onChange={e => setFormData({...formData, kategoriPermohonan: e.target.value})}
-                style={{ width: '1.2rem', height: '1.2rem', accentColor: 'var(--color-primary-shadow)' }}
+                style={{ width: '1.25rem', height: '1.25rem', accentColor: 'var(--color-primary)' }}
               />
-              <span style={{ fontSize: '0.95rem', color: 'var(--color-text-main)' }}>Pendampingan Hukum Proyek Infrastruktur</span>
+              <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--color-text-main)' }}>Pendampingan Hukum Proyek Infrastruktur</span>
             </label>
           </div>
         </div>
@@ -300,7 +300,7 @@ function PermohonanForm() {
         <div className="form-group" style={{ marginTop: '1.75rem', marginBottom: '1.5rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.5rem' }}>
             <label className="form-label" style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}>
-              <UploadCloud size={18} color="var(--color-primary-shadow)" />
+              <UploadCloud size={18} color="var(--color-primary)" />
               Dokumen Surat Permohonan Resmi <span style={{ color: 'var(--color-danger)' }}>*</span>
             </label>
             <button
@@ -309,7 +309,7 @@ function PermohonanForm() {
               style={{
                 background: 'transparent',
                 border: 'none',
-                color: 'var(--color-primary-shadow)',
+                color: 'var(--color-primary)',
                 fontSize: '0.8rem',
                 fontWeight: 700,
                 cursor: 'pointer',
@@ -375,8 +375,8 @@ function PermohonanForm() {
                   onDrop={handleDrop}
                   onClick={() => fileInputRef.current?.click()}
                   style={{
-                    border: `2px dashed ${dragActive ? 'var(--color-primary-shadow)' : 'var(--color-border)'}`,
-                    backgroundColor: dragActive ? 'rgba(30, 93, 107, 0.05)' : 'var(--color-bg)',
+                    border: `2px dashed ${dragActive ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                    backgroundColor: dragActive ? 'rgba(20, 83, 45, 0.05)' : 'var(--color-bg)',
                     borderRadius: 'var(--radius-md)',
                     padding: '2rem 1.5rem',
                     textAlign: 'center',
@@ -407,7 +407,7 @@ function PermohonanForm() {
               ) : (
                 <div style={{
                   padding: '1rem',
-                  border: '1.5px solid var(--color-primary-shadow)',
+                  border: '1.5px solid var(--color-primary)',
                   backgroundColor: '#f8fafc',
                   borderRadius: 'var(--radius-md)',
                   display: 'flex',
@@ -455,7 +455,7 @@ function PermohonanForm() {
                     <button
                       type="button"
                       className="btn btn-outline"
-                      style={{ padding: '0.4rem 0.6rem', color: 'var(--color-danger-shadow)', borderColor: 'var(--color-danger-shadow)' }}
+                      style={{ padding: '0.4rem 0.6rem', color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }}
                       onClick={handleRemoveFile}
                       title="Batalkan pilihan berkas"
                     >

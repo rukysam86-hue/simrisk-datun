@@ -1,44 +1,141 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ShieldAlert, CheckCircle, FileText, Trash2, AlertTriangle, AlertCircle, ShieldCheck, Search, ChevronLeft, ChevronRight, Link as LinkIcon, Plus, X, Folder } from 'lucide-react';
+import {
+  ShieldAlert,
+  CheckCircle2,
+  FileText,
+  Trash2,
+  AlertTriangle,
+  AlertCircle,
+  ShieldCheck,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  Plus,
+  X,
+  Clock,
+  Briefcase,
+  Layers,
+  Activity,
+  FileCheck2,
+  TrendingUp,
+  FileWarning,
+  Calendar
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getAllPermohonan, deletePermohonan } from '../data/store';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-// ─── Konstanta ───────────────────────────────────────────────
+// ─── Status Tahap SOP Sesuai Standar Datun ──────────────────────
 const STEP_LABELS = {
-  1: { label: 'DITERIMA',       bg: '#e0f0ff', color: '#0055cc', border: '#99c2ff' },
-  2: { label: 'MENUNGGU SP-1',  bg: '#fff5cc', color: '#a07800', border: '#ffe066' },
-  3: { label: 'MENUNGGU TELAAH',bg: '#fff0e5', color: '#b84d00', border: '#ffb380' },
-  4: { label: 'MENUNGGU SP-2',  bg: '#f3e5ff', color: '#6d00cc', border: '#c680ff' },
+  1: { label: 'Surat Diterima',      bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', icon: FileText },
+  2: { label: 'Penerbitan SP-1',    bg: '#fef3c7', color: '#b45309', border: '#fde68a', icon: Clock },
+  3: { label: 'Proses Telaah JPN',  bg: '#fff7ed', color: '#c2410c', border: '#fed7aa', icon: FileCheck2 },
+  4: { label: 'Penerbitan SP-2',    bg: '#f5f3ff', color: '#6d28d9', border: '#ddd6fe', icon: ShieldCheck },
+  5: { label: 'Monitoring Berjalan',bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0', icon: Activity },
 };
 
 const PAGE_SIZE_OPTIONS = [5, 10, 20];
 
-const truncateText = (text, maxLength) => text && text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+const formatRupiah = (val) => {
+  if (!val && val !== 0) return '-';
+  return 'Rp ' + Number(val).toLocaleString('id-ID');
+};
 
-// ─── Komponen Badge Status ────────────────────────────────────
+// ─── Komponen Badge Status Tahap ────────────────────────────────
 function StatusBadge({ step }) {
-  const s = STEP_LABELS[step] || { label: `STEP ${step}`, bg: '#f0f0f0', color: '#555', border: '#ccc' };
+  const s = STEP_LABELS[step] || { label: `Tahap ${step}`, bg: '#f1f5f9', color: '#475569', border: '#cbd5e1', icon: Clock };
+  const IconComponent = s.icon;
+
   return (
     <span style={{
-      display: 'inline-flex', alignItems: 'center',
-      padding: '0.3rem 0.75rem',
-      borderRadius: '99px',
-      fontSize: '0.72rem',
-      fontWeight: 800,
-      letterSpacing: '0.06em',
-      textTransform: 'uppercase',
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '0.4rem',
+      padding: '0.35rem 0.75rem',
+      borderRadius: 'var(--radius-full)',
+      fontSize: '0.78rem',
+      fontWeight: 700,
+      letterSpacing: '0.02em',
       background: s.bg,
       color: s.color,
-      border: `2px solid ${s.border}`,
+      border: `1px solid ${s.border}`,
       whiteSpace: 'nowrap',
     }}>
-      {s.label}
+      <IconComponent size={14} style={{ color: s.color, flexShrink: 0 }} />
+      <span>{s.label}</span>
     </span>
   );
 }
 
-// ─── Komponen Pagination ─────────────────────────────────────
+// ─── Komponen Badge Tingkat Risiko ──────────────────────────────
+const RISK_CONFIG = {
+  high:   { label: 'Risiko Tinggi', bg: '#fef2f2', color: '#b91c1c', border: '#fecaca', dot: '#dc2626' },
+  medium: { label: 'Risiko Sedang', bg: '#fffbeb', color: '#b45309', border: '#fde68a', dot: '#d97706' },
+  low:    { label: 'Risiko Rendah', bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0', dot: '#16a34a' },
+};
+
+function RiskBadge({ risk }) {
+  if (!risk) return <span style={{ color: 'var(--color-text-muted)', fontWeight: 600, fontSize: '0.85rem' }}>—</span>;
+  const r = RISK_CONFIG[risk] || { label: risk, bg: '#f8fafc', color: '#475569', border: '#e2e8f0', dot: '#94a3b8' };
+
+  return (
+    <span style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '0.45rem',
+      padding: '0.32rem 0.75rem',
+      borderRadius: 'var(--radius-full)',
+      fontSize: '0.78rem',
+      fontWeight: 700,
+      background: r.bg,
+      color: r.color,
+      border: `1px solid ${r.border}`,
+      whiteSpace: 'nowrap',
+    }}>
+      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: r.dot, flexShrink: 0 }} />
+      <span>{r.label}</span>
+    </span>
+  );
+}
+
+// ─── Komponen Dual Progress Bar (Fisik vs Keuangan) ─────────────
+function DualProgressBar({ fisik = '0%', keuangan = '0%' }) {
+  const fNum = parseFloat(fisik) || 0;
+  const kNum = parseFloat(keuangan) || 0;
+  const deviasi = fNum - kNum;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', minWidth: '150px' }}>
+      {/* Bar Fisik */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600 }}>
+        <span style={{ color: 'var(--color-text-muted)' }}>Fisik:</span>
+        <span style={{ color: 'var(--color-primary)', fontWeight: 700 }}>{fisik}</span>
+      </div>
+      <div style={{ height: '6px', background: '#e2e8f0', borderRadius: '99px', overflow: 'hidden' }}>
+        <div style={{ width: `${Math.min(fNum, 100)}%`, height: '100%', background: 'var(--color-primary)', borderRadius: '99px' }} />
+      </div>
+
+      {/* Bar Keuangan */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, marginTop: '2px' }}>
+        <span style={{ color: 'var(--color-text-muted)' }}>Keuangan:</span>
+        <span style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{keuangan}</span>
+      </div>
+      <div style={{ height: '6px', background: '#e2e8f0', borderRadius: '99px', overflow: 'hidden' }}>
+        <div style={{ width: `${Math.min(kNum, 100)}%`, height: '100%', background: 'var(--color-accent)', borderRadius: '99px' }} />
+      </div>
+
+      {/* Deviasi */}
+      <div style={{ fontSize: '0.72rem', fontWeight: 700, textAlign: 'right', marginTop: '2px' }}>
+        <span style={{ color: deviasi < -5 ? 'var(--color-danger)' : deviasi < 0 ? 'var(--color-warning)' : 'var(--color-success)' }}>
+          Deviasi: {deviasi > 0 ? `+${deviasi.toFixed(1)}%` : `${deviasi.toFixed(1)}%`}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Komponen Pagination Ergonomis ──────────────────────────────
 function Pagination({ currentPage, totalPages, pageSize, onPageChange, onPageSizeChange, totalItems }) {
   if (totalItems === 0) return null;
 
@@ -56,28 +153,26 @@ function Pagination({ currentPage, totalPages, pageSize, onPageChange, onPageSiz
   }
 
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '0.9rem 1.25rem',
-      borderTop: '2px solid var(--color-border)',
-      backgroundColor: '#fafafa',
-      flexWrap: 'wrap',
-      gap: '0.75rem',
-    }}>
-      {/* Info & Page Size */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--color-text-muted)' }}>
-          Menampilkan <strong style={{ color: 'var(--color-text-main)' }}>{from}–{to}</strong> dari <strong style={{ color: 'var(--color-text-main)' }}>{totalItems}</strong> data
+    <div className="pagination-container">
+      {/* Informasi Baris Data */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
+        <span style={{ color: 'var(--color-text-muted)', fontWeight: 500 }}>
+          Menampilkan <strong style={{ color: 'var(--color-text-main)' }}>{from}–{to}</strong> dari <strong style={{ color: 'var(--color-text-main)' }}>{totalItems}</strong> baris
         </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--color-text-muted)' }}>Per halaman:</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={{ color: 'var(--color-text-muted)' }}>Baris:</span>
           <select
             value={pageSize}
             onChange={e => { onPageSizeChange(Number(e.target.value)); onPageChange(1); }}
             style={{
-              padding: '0.25rem 0.5rem', fontSize: '0.82rem', fontWeight: 700,
-              border: '2px solid var(--color-border)', borderRadius: '6px',
-              background: 'white', color: 'var(--color-text-main)', cursor: 'pointer',
+              padding: '0.3rem 0.6rem',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-sm)',
+              background: 'white',
+              color: 'var(--color-text-main)',
+              cursor: 'pointer',
             }}
           >
             {PAGE_SIZE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
@@ -85,36 +180,25 @@ function Pagination({ currentPage, totalPages, pageSize, onPageChange, onPageSiz
         </div>
       </div>
 
-      {/* Page Buttons */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+      {/* Tombol Halaman */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
         <button
+          className="pagination-btn"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: '32px', height: '32px', border: '2px solid var(--color-border)',
-            borderRadius: '8px', background: 'white', cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-            opacity: currentPage === 1 ? 0.4 : 1, transition: 'all 0.15s',
-          }}
+          title="Halaman Sebelumnya"
         >
           <ChevronLeft size={16} />
         </button>
 
         {pages.map((p, i) =>
           p === '...' ? (
-            <span key={`ellipsis-${i}`} style={{ padding: '0 0.25rem', color: 'var(--color-text-muted)', fontWeight: 700 }}>…</span>
+            <span key={`ellipsis-${i}`} style={{ padding: '0 0.35rem', color: 'var(--color-text-muted)', fontWeight: 700 }}>…</span>
           ) : (
             <button
               key={p}
               onClick={() => onPageChange(p)}
-              style={{
-                width: '32px', height: '32px', border: '2px solid',
-                borderRadius: '8px', cursor: 'pointer', fontWeight: 800, fontSize: '0.82rem',
-                transition: 'all 0.15s',
-                borderColor: p === currentPage ? 'var(--color-secondary)' : 'var(--color-border)',
-                background:  p === currentPage ? '#ddf4ff' : 'white',
-                color:       p === currentPage ? 'var(--color-secondary-shadow)' : 'var(--color-text-main)',
-              }}
+              className={`pagination-btn ${p === currentPage ? 'active' : ''}`}
             >
               {p}
             </button>
@@ -122,14 +206,10 @@ function Pagination({ currentPage, totalPages, pageSize, onPageChange, onPageSiz
         )}
 
         <button
+          className="pagination-btn"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: '32px', height: '32px', border: '2px solid var(--color-border)',
-            borderRadius: '8px', background: 'white', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-            opacity: currentPage === totalPages ? 0.4 : 1, transition: 'all 0.15s',
-          }}
+          title="Halaman Berikutnya"
         >
           <ChevronRight size={16} />
         </button>
@@ -138,13 +218,12 @@ function Pagination({ currentPage, totalPages, pageSize, onPageChange, onPageSiz
   );
 }
 
-// ─── Komponen Tabel Permohonan ───────────────────────────────
+// ─── Tabel Permohonan Dalam Proses (Tahap 1–4) ─────────────────
 function PermohonanTable({ data, onDelete }) {
-  const [search, setSearch]         = useState('');
+  const [search, setSearch]           = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize]     = useState(5);
+  const [pageSize, setPageSize]       = useState(5);
 
-  // Filter berdasarkan pencarian
   const filtered = useMemo(() => {
     if (!search.trim()) return data;
     const q = search.toLowerCase();
@@ -158,7 +237,6 @@ function PermohonanTable({ data, onDelete }) {
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const paginated  = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  // Reset ke halaman 1 saat pencarian berubah atau sesuaikan jika melebihi totalPages
   useEffect(() => { setCurrentPage(1); }, [search]);
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -167,100 +245,106 @@ function PermohonanTable({ data, onDelete }) {
   }, [totalPages, currentPage]);
 
   return (
-    <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: '2rem', border: '2px solid var(--color-secondary-shadow)' }}>
-
-      {/* Header */}
+    <div className="table-card-wrapper fade-in">
+      {/* Header Tabel & Pencarian */}
       <div style={{
         padding: '1.25rem 1.5rem',
-        borderBottom: '2px solid var(--color-border)',
-        backgroundColor: '#ddf4ff',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        flexWrap: 'wrap', gap: '0.75rem',
+        borderBottom: '1px solid var(--color-border)',
+        backgroundColor: '#ffffff',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '1rem',
       }}>
         <div>
-          <h2 style={{ margin: 0, color: 'var(--color-secondary-shadow)', fontSize: '1.15rem' }}>
-            Permohonan Pendampingan
+          <h3 style={{ margin: 0, fontSize: '1.15rem', color: 'var(--color-text-main)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <span>Permohonan Sedang Diproses</span>
             <span style={{
-              marginLeft: '0.6rem', display: 'inline-flex', alignItems: 'center',
-              background: 'var(--color-secondary)', color: 'white',
-              borderRadius: '99px', padding: '0.1rem 0.6rem',
-              fontSize: '0.8rem', fontWeight: 800, verticalAlign: 'middle',
+              background: 'var(--color-primary-light)',
+              color: 'var(--color-primary)',
+              border: '1px solid var(--color-primary-border)',
+              borderRadius: 'var(--radius-full)',
+              padding: '0.15rem 0.65rem',
+              fontSize: '0.78rem',
+              fontWeight: 700,
             }}>
-              Dalam Proses
+              Tahap 1 s.d. 4 SOP
             </span>
-          </h2>
-          <p style={{ margin: '0.25rem 0 0', fontSize: '0.82rem', color: 'var(--color-secondary-shadow)', fontWeight: 700, opacity: 0.75 }}>
-            {data.length} permohonan sedang berjalan
+          </h3>
+          <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
+            Daftar surat permohonan yang menunggu verifikasi, penerbitan SP-1, telaah yuridis, atau SP-2.
           </p>
         </div>
 
-        {/* Search bar */}
-        <div style={{ position: 'relative', minWidth: '240px' }}>
-          <Search size={16} style={{
-            position: 'absolute', left: '0.75rem', top: '50%',
-            transform: 'translateY(-50%)', color: 'var(--color-text-muted)',
+        {/* Input Pencarian */}
+        <div style={{ position: 'relative', minWidth: '260px' }}>
+          <Search size={17} style={{
+            position: 'absolute',
+            left: '0.85rem',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            color: 'var(--color-text-muted)',
             pointerEvents: 'none',
           }} />
           <input
             type="text"
-            placeholder="Cari instansi, perihal, nomor surat..."
+            placeholder="Cari instansi, nomor, perihal..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            style={{
-              width: '100%', paddingLeft: '2.25rem', paddingRight: search ? '2.25rem' : '0.9rem',
-              paddingTop: '0.55rem', paddingBottom: '0.55rem',
-              border: '2px solid rgba(28,176,246,0.3)', borderRadius: '10px',
-              fontSize: '0.875rem', fontWeight: 600,
-              background: 'white', color: 'var(--color-text-main)',
-              outline: 'none', transition: 'border-color 0.2s',
-            }}
-            onFocus={e => e.target.style.borderColor = 'var(--color-secondary)'}
-            onBlur={e => e.target.style.borderColor = 'rgba(28,176,246,0.3)'}
+            className="form-input"
+            style={{ paddingLeft: '2.4rem', paddingRight: search ? '2.4rem' : '1rem', minHeight: '40px', fontSize: '0.9rem' }}
           />
           {search && (
             <button
               onClick={() => setSearch('')}
               style={{
-                position: 'absolute', right: '0.6rem', top: '50%',
-                transform: 'translateY(-50%)', background: 'none', border: 'none',
-                cursor: 'pointer', color: 'var(--color-text-muted)',
-                display: 'flex', alignItems: 'center', padding: '2px',
+                position: 'absolute',
+                right: '0.65rem',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--color-text-muted)',
+                padding: '3px',
               }}
+              title="Reset pencarian"
             >
-              <X size={14} />
+              <X size={16} />
             </button>
           )}
         </div>
       </div>
 
-      {/* Table */}
-      <div style={{ overflowX: 'auto' }}>
-        <table className="table" style={{ minWidth: '600px' }}>
+      {/* Kontainer Tabel */}
+      <div className="table-responsive">
+        <table className="table">
           <thead>
             <tr>
-              <th style={{ width: '40px', textAlign: 'center' }}>#</th>
+              <th style={{ width: '45px', textAlign: 'center' }}>No</th>
               <th>Instansi Pemohon</th>
               <th>Nomor & Perihal Surat</th>
-              <th style={{ textAlign: 'center' }}>Status</th>
-              <th style={{ textAlign: 'center' }}>Aksi</th>
+              <th style={{ textAlign: 'center' }}>Tahapan SOP</th>
+              <th style={{ textAlign: 'center', width: '130px' }}>Aksi</th>
             </tr>
           </thead>
           <tbody>
             {paginated.length === 0 ? (
               <tr>
-                <td colSpan="5" style={{ textAlign: 'center', padding: '2.5rem 1rem' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                    <Search size={32} color="var(--color-text-muted)" strokeWidth={1.5} />
-                    <span style={{ color: 'var(--color-text-muted)', fontWeight: 700, fontSize: '0.9rem' }}>
-                      {search ? `Tidak ada hasil untuk "${search}"` : 'Tidak ada permohonan dalam proses.'}
+                <td colSpan="5" style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.6rem' }}>
+                    <Search size={36} color="var(--color-text-muted)" strokeWidth={1.5} />
+                    <span style={{ color: 'var(--color-text-muted)', fontWeight: 600, fontSize: '0.95rem' }}>
+                      {search ? `Tidak ditemukan data untuk "${search}"` : 'Belum ada permohonan dalam proses.'}
                     </span>
                     {search && (
-                      <button onClick={() => setSearch('')} style={{
-                        marginTop: '0.25rem', background: 'none', border: 'none',
-                        color: 'var(--color-secondary)', fontWeight: 700, cursor: 'pointer',
-                        fontSize: '0.85rem', textDecoration: 'underline',
-                      }}>
-                        Hapus pencarian
+                      <button
+                        onClick={() => setSearch('')}
+                        className="btn btn-sm btn-outline"
+                        style={{ marginTop: '0.25rem' }}
+                      >
+                        Hapus Filter
                       </button>
                     )}
                   </div>
@@ -268,61 +352,64 @@ function PermohonanTable({ data, onDelete }) {
               </tr>
             ) : (
               paginated.map((act, idx) => (
-                <tr key={act.id} style={{ transition: 'background 0.15s' }}>
-                  {/* Nomor urut */}
-                  <td style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontWeight: 800, fontSize: '0.85rem' }}>
+                <tr key={act.id}>
+                  {/* Nomor */}
+                  <td style={{ textAlign: 'center', fontWeight: 700, color: 'var(--color-text-muted)' }}>
                     {(currentPage - 1) * pageSize + idx + 1}
                   </td>
 
                   {/* Instansi */}
                   <td>
-                    <div style={{ fontWeight: 800, fontSize: '0.85rem', color: '#1a2332' }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--color-text-main)' }}>
                       {act.suratData?.asalSurat || act.suratData?.namaPemohon || '-'}
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 700, marginTop: '2px' }}>
-                      {act.suratData?.tanggalSurat
-                        ? new Date(act.suratData.tanggalSurat).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
-                        : '-'}
+                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <Calendar size={13} />
+                      <span>
+                        {act.suratData?.tanggalSurat
+                          ? new Date(act.suratData.tanggalSurat).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+                          : '-'}
+                      </span>
                     </div>
                   </td>
 
-                  {/* Nomor & Perihal */}
+                  {/* Perihal */}
                   <td>
-                    <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--color-text-main)', marginBottom: '2px' }}>
+                    <div style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--color-text-body)', lineHeight: 1.4 }}>
                       {act.suratData?.perihal || '-'}
                     </div>
                     {act.suratData?.nomorSurat && (
-                      <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 700, fontFamily: 'monospace' }}>
-                        {act.suratData.nomorSurat}
+                      <div style={{ fontSize: '0.78rem', color: 'var(--color-accent)', fontWeight: 700, fontFamily: 'monospace', marginTop: '3px' }}>
+                        No: {act.suratData.nomorSurat}
                       </div>
                     )}
                   </td>
 
-                  {/* Status */}
+                  {/* Status Tahap SOP */}
                   <td style={{ textAlign: 'center' }}>
                     <StatusBadge step={act.currentStep} />
                   </td>
 
                   {/* Aksi */}
                   <td style={{ textAlign: 'center' }}>
-                    <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
+                    <div style={{ display: 'flex', gap: '0.45rem', justifyContent: 'center' }}>
                       <Link
                         to={`/permohonan/${act.id}`}
-                        className="btn btn-secondary"
-                        style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem', borderRadius: '8px' }}
+                        className="btn btn-sm btn-primary"
+                        title="Buka Lembar Kerja Tahapan Permohonan"
                       >
                         Detail
                       </Link>
                       <button
                         type="button"
-                        className="btn btn-outline"
-                        style={{ padding: '0.45rem 0.6rem', borderRadius: '8px', color: 'var(--color-danger-shadow)', borderColor: 'var(--color-danger-shadow)', cursor: 'pointer' }}
+                        className="btn btn-sm btn-outline"
+                        style={{ color: 'var(--color-danger)', borderColor: 'var(--color-border)' }}
                         onClick={(e) => {
                           e.stopPropagation();
                           e.preventDefault();
                           onDelete(act.id);
                         }}
-                        title="Hapus Data Permohonan"
+                        title="Hapus Permohonan"
                       >
                         <Trash2 size={15} />
                       </button>
@@ -348,57 +435,7 @@ function PermohonanTable({ data, onDelete }) {
   );
 }
 
-// ─── Komponen Badge Risiko ───────────────────────────────────
-const RISK_CONFIG = {
-  high:   { label: 'Risiko Tinggi',  bg: '#ffe2e2', color: '#ea2b2b', border: '#ffb3b3', dot: '#ff4b4b' },
-  medium: { label: 'Risiko Sedang',  bg: '#fff5cc', color: '#a07800', border: '#ffe066', dot: '#ffc800' },
-  low:    { label: 'Risiko Rendah',  bg: '#e5f9d6', color: '#58a700', border: '#bce699', dot: '#58cc02' },
-};
-
-function RiskBadge({ risk }) {
-  if (!risk) return <span style={{ color: 'var(--color-text-muted)', fontWeight: 700, fontSize: '0.82rem' }}>—</span>;
-  const r = RISK_CONFIG[risk] || { label: risk, bg: '#f0f0f0', color: '#555', border: '#ccc', dot: '#aaa' };
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
-      padding: '0.28rem 0.7rem',
-      borderRadius: '99px',
-      fontSize: '0.72rem', fontWeight: 800,
-      letterSpacing: '0.06em', textTransform: 'uppercase',
-      background: r.bg, color: r.color, border: `2px solid ${r.border}`,
-      whiteSpace: 'nowrap',
-    }}>
-      <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: r.dot, flexShrink: 0 }} />
-      {r.label}
-    </span>
-  );
-}
-
-// ─── Komponen Progress Bar ────────────────────────────────────
-function ProgressBar({ value }) {
-  const pct = parseInt(value) || 0;
-  const color = pct >= 80 ? '#58cc02' : pct >= 40 ? '#ffc800' : '#1cb0f6';
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-      <div style={{
-        flex: 1, height: '8px',
-        background: '#efefef', borderRadius: '99px',
-        overflow: 'hidden', minWidth: '60px',
-      }}>
-        <div style={{
-          width: `${Math.min(pct, 100)}%`, height: '100%',
-          background: color, borderRadius: '99px',
-          transition: 'width 0.4s ease',
-        }} />
-      </div>
-      <span style={{ fontWeight: 800, fontSize: '0.82rem', minWidth: '36px', color: color }}>
-        {value || '0%'}
-      </span>
-    </div>
-  );
-}
-
-// ─── Tabel Kegiatan Aktif ─────────────────────────────────────
+// ─── Tabel Kegiatan Monitoring Aktif (Tahap 5) ─────────────────
 function KegiatanTable({ data, onDelete }) {
   const [search, setSearch]           = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -410,7 +447,7 @@ function KegiatanTable({ data, onDelete }) {
     return data.filter(p =>
       p.suratData?.perihal?.toLowerCase().includes(q)   ||
       p.suratData?.asalSurat?.toLowerCase().includes(q) ||
-      p.monitoring?.keterangan?.toLowerCase().includes(q)
+      p.monitoring?.kegiatan?.toLowerCase().includes(q)
     );
   }, [data, search]);
 
@@ -425,203 +462,158 @@ function KegiatanTable({ data, onDelete }) {
   }, [totalPages, currentPage]);
 
   return (
-    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-
-      {/* Header */}
+    <div className="table-card-wrapper fade-in">
+      {/* Header Tabel */}
       <div style={{
         padding: '1.25rem 1.5rem',
-        borderBottom: '2px solid var(--color-border)',
-        background: 'linear-gradient(135deg, #f0fdf4 0%, #e5f9d6 100%)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        flexWrap: 'wrap', gap: '0.75rem',
+        borderBottom: '1px solid var(--color-border)',
+        backgroundColor: '#ffffff',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '1rem',
       }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: '1.15rem', color: 'var(--color-primary-shadow)' }}>
-            Daftar Kegiatan Aktif
+          <h3 style={{ margin: 0, fontSize: '1.15rem', color: 'var(--color-text-main)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <span>Kegiatan Pendampingan Aktif</span>
             <span style={{
-              marginLeft: '0.6rem', display: 'inline-flex', alignItems: 'center',
-              background: 'var(--color-primary)', color: 'white',
-              borderRadius: '99px', padding: '0.1rem 0.6rem',
-              fontSize: '0.8rem', fontWeight: 800, verticalAlign: 'middle',
+              background: 'var(--color-accent-light)',
+              color: 'var(--color-accent)',
+              border: '1px solid var(--color-accent-border)',
+              borderRadius: 'var(--radius-full)',
+              padding: '0.15rem 0.65rem',
+              fontSize: '0.78rem',
+              fontWeight: 700,
             }}>
-              Berlangsung
+              Tahap 5 Monitoring & Evaluasi
             </span>
-          </h2>
-          <p style={{ margin: '0.25rem 0 0', fontSize: '0.82rem', color: 'var(--color-primary-shadow)', fontWeight: 700, opacity: 0.75 }}>
-            {data.length} kegiatan sedang didampingi
+          </h3>
+          <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
+            Proyek fisik & kegiatan hukum strategis yang didampingi Tim JPN Kejati NTT secara berkelanjutan.
           </p>
         </div>
 
-        {/* Search */}
-        <div style={{ position: 'relative', minWidth: '240px' }}>
-          <Search size={16} style={{
-            position: 'absolute', left: '0.75rem', top: '50%',
-            transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none',
+        {/* Input Pencarian */}
+        <div style={{ position: 'relative', minWidth: '260px' }}>
+          <Search size={17} style={{
+            position: 'absolute',
+            left: '0.85rem',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            color: 'var(--color-text-muted)',
+            pointerEvents: 'none',
           }} />
           <input
             type="text"
-            placeholder="Cari kegiatan, instansi, keterangan..."
+            placeholder="Cari kegiatan, pemohon..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            style={{
-              width: '100%', paddingLeft: '2.25rem', paddingRight: search ? '2.25rem' : '0.9rem',
-              paddingTop: '0.55rem', paddingBottom: '0.55rem',
-              border: '2px solid rgba(88,167,0,0.3)', borderRadius: '10px',
-              fontSize: '0.875rem', fontWeight: 600,
-              background: 'white', color: 'var(--color-text-main)',
-              outline: 'none', transition: 'border-color 0.2s',
-            }}
-            onFocus={e => e.target.style.borderColor = 'var(--color-primary)'}
-            onBlur={e => e.target.style.borderColor = 'rgba(88,167,0,0.3)'}
+            className="form-input"
+            style={{ paddingLeft: '2.4rem', paddingRight: search ? '2.4rem' : '1rem', minHeight: '40px', fontSize: '0.9rem' }}
           />
           {search && (
             <button
               onClick={() => setSearch('')}
               style={{
-                position: 'absolute', right: '0.6rem', top: '50%',
-                transform: 'translateY(-50%)', background: 'none', border: 'none',
-                cursor: 'pointer', color: 'var(--color-text-muted)',
-                display: 'flex', alignItems: 'center', padding: '2px',
+                position: 'absolute',
+                right: '0.65rem',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--color-text-muted)',
+                padding: '3px',
               }}
+              title="Reset pencarian"
             >
-              <X size={14} />
+              <X size={16} />
             </button>
           )}
         </div>
       </div>
 
-      {/* Table */}
-      <div style={{ overflowX: 'auto' }}>
-        <table className="table" style={{ minWidth: '780px' }}>
+      {/* Kontainer Tabel Responsif */}
+      <div className="table-responsive">
+        <table className="table">
           <thead>
             <tr>
-              <th style={{ width: '36px', textAlign: 'center' }}>#</th>
-              <th>Instansi & Kegiatan</th>
-              <th style={{ textAlign: 'center' }}>Risiko</th>
-              <th>Nilai Anggaran</th>
-              <th>Progres</th>
-              <th style={{ textAlign: 'center' }}>Aksi</th>
+              <th style={{ width: '45px', textAlign: 'center' }}>No</th>
+              <th>Instansi & Objek Kegiatan</th>
+              <th style={{ textAlign: 'center' }}>Klasifikasi Risiko</th>
+              <th>Pagu & Realisasi Anggaran</th>
+              <th>Capaian Fisik vs Keuangan</th>
+              <th style={{ textAlign: 'center', width: '130px' }}>Aksi</th>
             </tr>
           </thead>
           <tbody>
             {paginated.length === 0 ? (
               <tr>
-                <td colSpan="6" style={{ textAlign: 'center', padding: '2.5rem 1rem' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                    <Search size={32} color="var(--color-text-muted)" strokeWidth={1.5} />
-                    <span style={{ color: 'var(--color-text-muted)', fontWeight: 700, fontSize: '0.9rem' }}>
-                      {search ? `Tidak ada hasil untuk "${search}"` : 'Tidak ada kegiatan aktif.'}
+                <td colSpan="6" style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.6rem' }}>
+                    <Search size={36} color="var(--color-text-muted)" strokeWidth={1.5} />
+                    <span style={{ color: 'var(--color-text-muted)', fontWeight: 600, fontSize: '0.95rem' }}>
+                      {search ? `Tidak ditemukan data untuk "${search}"` : 'Belum ada kegiatan monitoring aktif.'}
                     </span>
-                    {search && (
-                      <button onClick={() => setSearch('')} style={{
-                        marginTop: '0.25rem', background: 'none', border: 'none',
-                        color: 'var(--color-primary)', fontWeight: 700, cursor: 'pointer',
-                        fontSize: '0.85rem', textDecoration: 'underline',
-                      }}>
-                        Hapus pencarian
-                      </button>
-                    )}
                   </div>
                 </td>
               </tr>
             ) : (
               paginated.map((act, idx) => (
                 <tr key={act.id}>
-                  {/* No */}
-                  <td style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontWeight: 800, fontSize: '0.85rem' }}>
+                  {/* Nomor */}
+                  <td style={{ textAlign: 'center', fontWeight: 700, color: 'var(--color-text-muted)' }}>
                     {(currentPage - 1) * pageSize + idx + 1}
                   </td>
 
-                  {/* Instansi & Perihal */}
+                  {/* Instansi & Kegiatan */}
                   <td>
-                    <div style={{ fontWeight: 800, fontSize: '0.85rem', color: '#1a2332', marginBottom: '2px' }} title={act.suratData?.perihal}>
-                      {truncateText(act.suratData?.perihal, 32) || '-'}
+                    <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--color-text-main)' }}>
+                      {act.monitoring?.kegiatan || act.suratData?.perihal || '-'}
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 700 }} title={act.suratData?.asalSurat}>
-                      {truncateText(act.suratData?.asalSurat, 32) || '-'}
+                    <div style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', marginTop: '2px', fontWeight: 500 }}>
+                      {act.suratData?.asalSurat || act.suratData?.namaPemohon || '-'}
                     </div>
                   </td>
 
-                  {/* Badge Risiko */}
+                  {/* Risiko */}
                   <td style={{ textAlign: 'center' }}>
                     <RiskBadge risk={act.monitoring?.risk} />
                   </td>
 
-                  {/* Nilai Anggaran */}
+                  {/* Anggaran */}
                   <td>
-                    <div style={{ fontWeight: 800, fontSize: '0.85rem', color: '#1a2332', whiteSpace: 'nowrap' }}>
-                      {act.monitoring?.nilai
-                        ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(act.monitoring.nilai)
-                        : <span style={{ color: 'var(--color-text-muted)', fontWeight: 700 }}>—</span>}
+                    <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--color-text-main)' }}>
+                      {formatRupiah(act.monitoring?.nilai)}
                     </div>
-                    {(() => {
-                      const isInfrastruktur = (act.suratData?.kategoriPermohonan || 'Pendampingan Hukum Proyek Infrastruktur') === 'Pendampingan Hukum Proyek Infrastruktur';
-                      if (!isInfrastruktur) return null;
-                      const m = act.monitoring;
-                      if (!m) return null;
-                      let totalCair = Number(m.totalRealisasiPencairan || 0);
-                      if (!totalCair) {
-                        totalCair = Number(m.initialData?.realisasiPencairan || m.realisasiPencairan || 0);
-                        (m.reports || []).forEach(r => { totalCair += Number(r.realisasiPencairan || 0); });
-                      }
-                      if (totalCair <= 0) return null;
-                      const pct = m.nilai > 0 ? ((totalCair / m.nilai) * 100).toFixed(0) : 0;
-                      return (
-                        <div style={{ fontSize: '0.72rem', color: '#15803d', fontWeight: 700, marginTop: '2px', whiteSpace: 'nowrap' }}>
-                          Cair: {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalCair)} ({pct}%)
-                        </div>
-                      );
-                    })()}
+                    <div style={{ fontSize: '0.78rem', color: 'var(--color-accent)', fontWeight: 600, marginTop: '2px' }}>
+                      Realisasi: {formatRupiah(act.monitoring?.realisasiPencairan)}
+                    </div>
                   </td>
 
-                  {/* Progres */}
-                  <td style={{ minWidth: '140px' }}>
-                    <ProgressBar value={act.monitoring?.persentaseKegiatan} />
-                    {act.monitoring?.progressKegiatan && (
-                      <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', marginTop: '4px', lineHeight: 1.4 }}>
-                        {act.monitoring.progressKegiatan}
-                      </div>
-                    )}
+                  {/* Progres Dual Bar */}
+                  <td>
+                    <DualProgressBar
+                      fisik={act.monitoring?.progress}
+                      keuangan={act.monitoring?.persentasePencairan}
+                    />
                   </td>
 
                   {/* Aksi */}
                   <td style={{ textAlign: 'center' }}>
-                    <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
-                      <button
-                        className="btn btn-outline"
-                        style={{ padding: '0.45rem 0.6rem', borderRadius: '8px' }}
-                        title="Salin Link Akses Pemohon"
-                        onClick={() => {
-                          const url = `${window.location.origin}/portal/${act.id}`;
-                          navigator.clipboard.writeText(`Akses Link: ${url}\nPassword: ${act.id}`);
-                          alert('Link dan password akses pemohon disalin ke clipboard!');
-                        }}
-                      >
-                        <LinkIcon size={15} />
-                      </button>
-                      {(act.driveFolderUrl || act.suratData?.driveFolderUrl) && (
-                        <a
-                          href={act.driveFolderUrl || act.suratData?.driveFolderUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="btn btn-outline"
-                          style={{ padding: '0.45rem 0.6rem', borderRadius: '8px', color: 'var(--color-primary-shadow)', borderColor: 'var(--color-primary-shadow)' }}
-                          title="Buka Folder Arsip Google Drive Kegiatan"
-                        >
-                          <Folder size={15} />
-                        </a>
-                      )}
+                    <div style={{ display: 'flex', gap: '0.45rem', justifyContent: 'center' }}>
                       <Link
                         to={`/permohonan/${act.id}`}
-                        className="btn btn-secondary"
-                        style={{ padding: '0.45rem 0.85rem', borderRadius: '8px', fontSize: '0.8rem' }}
+                        className="btn btn-sm btn-primary"
+                        title="Buka Panel Monitoring Proyek"
                       >
                         Detail
                       </Link>
                       <button
                         type="button"
-                        className="btn btn-outline"
-                        style={{ padding: '0.45rem 0.6rem', borderRadius: '8px', color: 'var(--color-danger-shadow)', borderColor: 'var(--color-danger-shadow)', cursor: 'pointer' }}
+                        className="btn btn-sm btn-outline"
+                        style={{ color: 'var(--color-danger)', borderColor: 'var(--color-border)' }}
                         onClick={(e) => {
                           e.stopPropagation();
                           e.preventDefault();
@@ -654,9 +646,10 @@ function KegiatanTable({ data, onDelete }) {
 }
 
 // ─── Halaman Utama Dashboard ──────────────────────────────────
-function InternalDashboard() {
+export default function InternalDashboard() {
   const [permohonanList, setPermohonanList] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('permohonan'); // 'permohonan' | 'kegiatan' | 'analisis'
 
   const loadData = async () => {
     setLoading(true);
@@ -665,154 +658,304 @@ function InternalDashboard() {
     setLoading(false);
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const handleDelete = async (id) => {
-    if (window.confirm('Yakin ingin menghapus data permohonan ini secara permanen?')) {
+    if (window.confirm('Yakin ingin menghapus data permohonan ini secara permanen dari sistem?')) {
       const cleanId = String(id).trim();
 
-      // 1. Optimistic update: langsung hilangkan seketika dari tabel di layar tanpa delay
+      // Optimistic update: langsung hilangkan seketika dari tabel
       setPermohonanList(prev => prev.filter(p => String(p.id).trim() !== cleanId));
 
       try {
-        // 2. Hapus dari localStorage & Supabase di background
         await deletePermohonan(cleanId);
       } catch (err) {
         console.error('Gagal menghapus permohonan:', err);
-        // Rollback jika terjadi error
         await loadData();
       }
-      // CATATAN: JANGAN panggil loadData() di sini saat sukses!
-      // Memanggil loadData() langsung setelah delete dapat memicu race condition
-      // di mana server Supabase / query mengembalikan data lama sebelum commit selesai,
-      // sehingga item yang sudah dihapus sempat muncul kembali.
     }
   };
 
+  // Filter Data
   const activities    = permohonanList.filter(p => p.currentStep === 5 && p.telaahData?.dapatDidampingi === 'ya');
   const newPermohonan = permohonanList.filter(p => p.currentStep < 5);
+  const disetujuiCount = permohonanList.filter(p => p.telaahData?.dapatDidampingi === 'ya').length;
+  const arsipCount    = permohonanList.filter(p => p.telaahData?.dapatDidampingi === 'tidak').length;
 
   const highRiskCount   = activities.filter(a => a.monitoring?.risk === 'high').length;
   const mediumRiskCount = activities.filter(a => a.monitoring?.risk === 'medium').length;
   const lowRiskCount    = activities.filter(a => a.monitoring?.risk === 'low').length;
-  const otherCount      = permohonanList.length - (highRiskCount + mediumRiskCount + lowRiskCount);
+  const otherCount      = activities.length - (highRiskCount + mediumRiskCount + lowRiskCount);
 
+  // Data Pie Chart
   const pieData = [
-    { name: 'Risiko Tinggi',          value: highRiskCount,   color: '#ea2b2b' },
-    { name: 'Risiko Sedang',          value: mediumRiskCount, color: '#e5b400' },
-    { name: 'Risiko Rendah',          value: lowRiskCount,    color: '#58a700' },
-    { name: 'Belum Dinilai / Lainnya',value: otherCount,      color: '#afafaf' },
+    { name: 'Risiko Tinggi',          value: highRiskCount,   color: '#dc2626' },
+    { name: 'Risiko Sedang',          value: mediumRiskCount, color: '#d97706' },
+    { name: 'Risiko Rendah',          value: lowRiskCount,    color: '#16a34a' },
+    { name: 'Belum Dinilai / Lainnya',value: Math.max(0, otherCount), color: '#94a3b8' },
   ].filter(d => d.value > 0);
 
   return (
     <div>
-      {/* Page Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+      {/* Page Header Admin */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '1.75rem',
+        flexWrap: 'wrap',
+        gap: '1rem',
+      }}>
         <div>
-          <h1>Dashboard Simrisk Datun Kejati NTT</h1>
-          <p style={{ color: 'var(--color-text-muted)', fontWeight: '700' }}>Ringkasan Kegiatan Pendampingan Hukum</p>
+          <h1 style={{ margin: 0, color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <span>Dashboard Pengawasan Datun</span>
+          </h1>
+          <p style={{ margin: '0.35rem 0 0', color: 'var(--color-text-muted)', fontSize: '0.95rem' }}>
+            Monitoring Terintegrasi Permohonan Pendampingan Hukum & Mitigasi Risiko Proyek
+          </p>
         </div>
-        <Link to="/register" className="btn btn-primary">
+
+        <Link to="/register" className="btn btn-accent" style={{ padding: '0.75rem 1.4rem', fontWeight: 700 }}>
           <Plus size={20} />
-          Kegiatan Baru
+          <span>Registrasi Kegiatan Baru</span>
         </Link>
       </div>
 
-      {/* Stat Cards Row 1 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
-        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', border: '2px solid #99c2ff' }}>
-          <div style={{ background: '#e5f0ff', padding: '1rem', borderRadius: '16px', color: '#0055ff' }}>
-            <FileText size={32} />
+      {/* KPI Highlight Metrics (Sangat Mudah Dibaca untuk Usia 30+) */}
+      <div className="kpi-grid">
+        {/* Total Permohonan */}
+        <div className="kpi-card" style={{ '--card-accent-color': 'var(--color-primary)' }}>
+          <div className="kpi-icon-bubble" style={{ background: '#eff6ff', color: 'var(--color-primary)' }}>
+            <FileText size={28} />
           </div>
-          <div>
-            <h3 style={{ marginBottom: 0, fontSize: '2rem', color: '#0055ff' }}>{permohonanList.length}</h3>
-            <p style={{ margin: 0, fontWeight: 700, color: 'var(--color-text-muted)' }}>Total Permohonan Diterima</p>
-          </div>
-        </div>
-        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', border: '2px solid #bce699' }}>
-          <div style={{ background: '#e5f9d6', padding: '1rem', borderRadius: '16px', color: 'var(--color-primary-shadow)' }}>
-            <CheckCircle size={32} />
-          </div>
-          <div>
-            <h3 style={{ marginBottom: 0, fontSize: '2rem', color: 'var(--color-primary-shadow)' }}>{permohonanList.filter(p => p.telaahData?.dapatDidampingi === 'ya').length}</h3>
-            <p style={{ margin: 0, fontWeight: 700, color: 'var(--color-text-muted)' }}>Pendampingan Disetujui</p>
+          <div className="kpi-content">
+            <div className="kpi-value">{permohonanList.length}</div>
+            <div className="kpi-label">Total Permohonan Masuk</div>
           </div>
         </div>
-        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', border: '2px solid #ffb3b3' }}>
-          <div style={{ background: '#ffe2e2', padding: '1rem', borderRadius: '16px', color: 'var(--color-danger-shadow)' }}>
-            <ShieldAlert size={32} />
+
+        {/* Pendampingan Disetujui */}
+        <div className="kpi-card" style={{ '--card-accent-color': 'var(--color-warning)' }}>
+          <div className="kpi-icon-bubble" style={{ background: '#fef3c7', color: 'var(--color-warning)' }}>
+            <CheckCircle2 size={28} />
           </div>
-          <div>
-            <h3 style={{ marginBottom: 0, fontSize: '2rem', color: 'var(--color-danger-shadow)' }}>{permohonanList.filter(p => p.telaahData?.dapatDidampingi === 'tidak').length}</h3>
-            <p style={{ margin: 0, fontWeight: 700, color: 'var(--color-text-muted)' }}>Tidak Didampingi (Arsip)</p>
+          <div className="kpi-content">
+            <div className="kpi-value">{disetujuiCount}</div>
+            <div className="kpi-label">Pendampingan Disetujui</div>
+          </div>
+        </div>
+
+        {/* Kegiatan Monitoring Aktif */}
+        <div className="kpi-card" style={{ '--card-accent-color': 'var(--color-accent)' }}>
+          <div className="kpi-icon-bubble" style={{ background: '#f0f9ff', color: 'var(--color-accent)' }}>
+            <Activity size={28} />
+          </div>
+          <div className="kpi-content">
+            <div className="kpi-value">{activities.length}</div>
+            <div className="kpi-label">Kegiatan Berjalan (Tahap 5)</div>
+          </div>
+        </div>
+
+        {/* Proyek Berisiko Tinggi */}
+        <div className="kpi-card" style={{ '--card-accent-color': 'var(--color-danger)' }}>
+          <div className="kpi-icon-bubble" style={{ background: '#fef2f2', color: 'var(--color-danger)' }}>
+            <AlertTriangle size={28} />
+          </div>
+          <div className="kpi-content">
+            <div className="kpi-value">{highRiskCount}</div>
+            <div className="kpi-label">Perlu Mitigasi Segera</div>
           </div>
         </div>
       </div>
 
-      {/* Stat Cards Row 2 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
-        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', border: '2px solid #ffb3b3' }}>
-          <div style={{ background: '#ffe2e2', padding: '1rem', borderRadius: '16px', color: 'var(--color-danger-shadow)' }}>
-            <AlertTriangle size={32} />
-          </div>
-          <div>
-            <h3 style={{ marginBottom: 0, fontSize: '2rem', color: 'var(--color-danger-shadow)' }}>{highRiskCount}</h3>
-            <p style={{ margin: 0, fontWeight: 700, color: 'var(--color-text-muted)' }}>Proyek Risiko Tinggi</p>
-          </div>
-        </div>
-        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', border: '2px solid #ffe599' }}>
-          <div style={{ background: '#fff5cc', padding: '1rem', borderRadius: '16px', color: '#d4ac0d' }}>
-            <AlertCircle size={32} />
-          </div>
-          <div>
-            <h3 style={{ marginBottom: 0, fontSize: '2rem', color: '#d4ac0d' }}>{mediumRiskCount}</h3>
-            <p style={{ margin: 0, fontWeight: 700, color: 'var(--color-text-muted)' }}>Proyek Risiko Sedang</p>
-          </div>
-        </div>
-        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', border: '2px solid #bce699' }}>
-          <div style={{ background: '#e5f9d6', padding: '1rem', borderRadius: '16px', color: 'var(--color-primary-shadow)' }}>
-            <ShieldCheck size={32} />
-          </div>
-          <div>
-            <h3 style={{ marginBottom: 0, fontSize: '2rem', color: 'var(--color-primary-shadow)' }}>{lowRiskCount}</h3>
-            <p style={{ margin: 0, fontWeight: 700, color: 'var(--color-text-muted)' }}>Proyek Risiko Rendah</p>
-          </div>
-        </div>
+      {/* Tab Navigasi Halaman Utama Dashboard */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+        borderBottom: '2px solid var(--color-border)',
+        marginBottom: '1.5rem',
+        overflowX: 'auto',
+        paddingBottom: '2px',
+      }}>
+        <button
+          onClick={() => setActiveTab('permohonan')}
+          className="btn"
+          style={{
+            minHeight: '44px',
+            background: activeTab === 'permohonan' ? 'var(--color-primary)' : 'transparent',
+            color: activeTab === 'permohonan' ? '#ffffff' : 'var(--color-text-body)',
+            fontWeight: 700,
+            borderRadius: 'var(--radius-md) var(--radius-md) 0 0',
+            borderBottom: activeTab === 'permohonan' ? '2px solid var(--color-accent)' : '2px solid transparent',
+            marginBottom: '-2px',
+          }}
+        >
+          <Layers size={18} />
+          <span>Permohonan Dalam Proses</span>
+          <span style={{
+            background: activeTab === 'permohonan' ? 'rgba(255,255,255,0.2)' : 'var(--color-border)',
+            color: activeTab === 'permohonan' ? '#ffffff' : 'var(--color-text-main)',
+            padding: '0.1rem 0.5rem',
+            borderRadius: '99px',
+            fontSize: '0.75rem',
+            marginLeft: '0.3rem',
+          }}>
+            {newPermohonan.length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('kegiatan')}
+          className="btn"
+          style={{
+            minHeight: '44px',
+            background: activeTab === 'kegiatan' ? 'var(--color-primary)' : 'transparent',
+            color: activeTab === 'kegiatan' ? '#ffffff' : 'var(--color-text-body)',
+            fontWeight: 700,
+            borderRadius: 'var(--radius-md) var(--radius-md) 0 0',
+            borderBottom: activeTab === 'kegiatan' ? '2px solid var(--color-accent)' : '2px solid transparent',
+            marginBottom: '-2px',
+          }}
+        >
+          <Briefcase size={18} />
+          <span>Kegiatan Monitoring Aktif</span>
+          <span style={{
+            background: activeTab === 'kegiatan' ? 'rgba(255,255,255,0.2)' : 'var(--color-border)',
+            color: activeTab === 'kegiatan' ? '#ffffff' : 'var(--color-text-main)',
+            padding: '0.1rem 0.5rem',
+            borderRadius: '99px',
+            fontSize: '0.75rem',
+            marginLeft: '0.3rem',
+          }}>
+            {activities.length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('analisis')}
+          className="btn"
+          style={{
+            minHeight: '44px',
+            background: activeTab === 'analisis' ? 'var(--color-primary)' : 'transparent',
+            color: activeTab === 'analisis' ? '#ffffff' : 'var(--color-text-body)',
+            fontWeight: 700,
+            borderRadius: 'var(--radius-md) var(--radius-md) 0 0',
+            borderBottom: activeTab === 'analisis' ? '2px solid var(--color-accent)' : '2px solid transparent',
+            marginBottom: '-2px',
+          }}
+        >
+          <TrendingUp size={18} />
+          <span>Peta Risiko Yuridis</span>
+        </button>
       </div>
 
-      {/* Pie Chart */}
-      <div className="card" style={{ marginBottom: '2rem', padding: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <h2 style={{ marginBottom: '1.5rem' }}>Distribusi Risiko Permohonan</h2>
-        <div style={{ height: '350px', width: '100%', maxWidth: '600px' }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={pieData}
-                cx="50%" cy="50%"
-                labelLine={false}
-                outerRadius={120}
-                fill="#8884d8"
-                dataKey="value"
-                label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-              >
-                {pieData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value) => [value, 'Total Permohonan']} />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
+      {/* Konten Berdasarkan Tab yang Dipilih */}
+      {activeTab === 'permohonan' && (
+        <PermohonanTable data={newPermohonan} onDelete={handleDelete} />
+      )}
+
+      {activeTab === 'kegiatan' && (
+        <KegiatanTable data={activities} onDelete={handleDelete} />
+      )}
+
+      {activeTab === 'analisis' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }} className="fade-in">
+          {/* Card Grafik Distribusi Risiko */}
+          <div className="card">
+            <div className="card-header-clean">
+              <div className="card-title-clean">
+                <ShieldCheck size={20} style={{ color: 'var(--color-primary)' }} />
+                <span>Distribusi Tingkat Risiko Kegiatan</span>
+              </div>
+            </div>
+
+            {pieData.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--color-text-muted)' }}>
+                Belum ada data risiko kegiatan yang dinilai.
+              </div>
+            ) : (
+              <div style={{ width: '100%', height: 260 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={95}
+                      paddingAngle={4}
+                      dataKey="value"
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        background: '#ffffff',
+                        border: '1px solid var(--color-border)',
+                        borderRadius: '8px',
+                        boxShadow: 'var(--shadow-md)',
+                        fontSize: '0.85rem',
+                      }}
+                    />
+                    <Legend
+                      verticalAlign="bottom"
+                      height={36}
+                      formatter={(val) => <span style={{ color: 'var(--color-text-body)', fontWeight: 600, fontSize: '0.82rem' }}>{val}</span>}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+
+          {/* Card Panduan & Standar Mitigasi Datun */}
+          <div className="card" style={{ borderLeft: '4px solid var(--color-accent)' }}>
+            <div className="card-header-clean">
+              <div className="card-title-clean">
+                <ShieldAlert size={20} style={{ color: 'var(--color-accent)' }} />
+                <span>Pedoman Penanganan Risiko JPN</span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem', fontSize: '0.9rem' }}>
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#dc2626', marginTop: '4px', flexShrink: 0 }} />
+                <div>
+                  <strong style={{ color: '#b91c1c' }}>Risiko Tinggi (Deviasi &gt; 10% / Konflik Kontrak):</strong>
+                  <p style={{ margin: '2px 0 0', color: 'var(--color-text-muted)' }}>
+                    Wajib segera dilakukan rapat koordinasi terpadu bersama instansi pemohon, pengawas, dan pelaksana untuk menerbitkan Surat Saran JPN.
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#d97706', marginTop: '4px', flexShrink: 0 }} />
+                <div>
+                  <strong style={{ color: '#b45309' }}>Risiko Sedang (Deviasi 5% – 10% / Kendala Administrasi):</strong>
+                  <p style={{ margin: '2px 0 0', color: 'var(--color-text-muted)' }}>
+                    Pengawasan rutin uji mutu, verifikasi adendum kontrak, serta kepatuhan batas waktu pencairan termin.
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#16a34a', marginTop: '4px', flexShrink: 0 }} />
+                <div>
+                  <strong style={{ color: '#15803d' }}>Risiko Rendah (Deviasi Normal &lt; 5%):</strong>
+                  <p style={{ margin: '2px 0 0', color: 'var(--color-text-muted)' }}>
+                    Progres fisik dan keuangan seimbang sesuai kontrak kerja, pemantauan berkala via laporan mingguan pemohon.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-
-      {/* ── Tabel Permohonan Dalam Proses (dengan Search + Pagination) ── */}
-      <PermohonanTable data={newPermohonan} onDelete={handleDelete} />
-
-      {/* ── Tabel Kegiatan Aktif ── */}
-      <KegiatanTable data={activities} onDelete={handleDelete} />
+      )}
     </div>
   );
 }
-
-export default InternalDashboard;
